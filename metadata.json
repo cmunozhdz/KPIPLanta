@@ -1,0 +1,6 @@
+{
+  "name": "Lean WCM Dashboard",
+  "description": "Interactive SQCDP dashboard for World Class Manufacturing management with role-based access and temporal filters.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
