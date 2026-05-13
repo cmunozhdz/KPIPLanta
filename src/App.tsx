@@ -34,6 +34,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   LineChart, 
   Line, 
+  BarChart,
+  Bar,
+  Cell,
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -182,6 +185,13 @@ export default function App() {
       return acc;
     }, {} as Record<string, number>);
   }, [data, areas, filters]);
+
+  const globalChartData = useMemo(() => {
+    return areas.map(area => ({
+      name: area.name,
+      score: stats[area.id] || 0
+    })).sort((a, b) => b.score - a.score);
+  }, [areas, stats]);
 
   const handleSaveKpiValue = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -636,6 +646,63 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
+              {/* Global Performance Chart Section */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden"
+              >
+                <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h3 className="text-xl font-black text-slate-800 tracking-tighter uppercase">Desempeño de Pilares por Área</h3>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Estado actual de cumplimiento de metas por pilar WCM</p>
+                  </div>
+                </div>
+                <div className="h-80 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={globalChartData} 
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                      <XAxis type="number" domain={[0, 100]} hide />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category" 
+                        axisLine={false} 
+                        tickLine={false} 
+                        width={140}
+                        tick={{ fontSize: 11, fontWeight: 900, fill: '#64748b', textAnchor: 'end' }}
+                      />
+                      <Tooltip 
+                         cursor={{ fill: '#f8fafc' }}
+                         content={({ active, payload }) => {
+                           if (active && payload && payload.length) {
+                             return (
+                               <div className="bg-slate-900 text-white p-3 rounded-xl shadow-2xl border border-slate-700">
+                                 <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{payload[0].payload.name}</p>
+                                 <p className="text-sm font-black mt-1">{payload[0].value}% OK</p>
+                               </div>
+                             );
+                           }
+                           return null;
+                         }}
+                      />
+                      <Bar dataKey="score" radius={[0, 8, 8, 0]} barSize={24}>
+                        {globalChartData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.score >= 98 ? '#22c55e' : (entry.score >= 90 ? '#f59e0b' : '#ef4444')} 
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </motion.div>
+
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {areas.map((area) => (
