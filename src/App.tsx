@@ -455,7 +455,7 @@ export default function App() {
               <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-200">
                 <BarChart3 className="text-white" size={20} />
               </div>
-              <h1 className="text-2xl font-black text-slate-800 tracking-tight">Tablero de indicadores - Polaquimia</h1>
+              <h1 className="text-2xl font-black text-slate-800 tracking-tight">KPI Planta Polak</h1>
             </div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-11">Pillar Management System</p>
           </div>
