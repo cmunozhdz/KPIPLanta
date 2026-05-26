@@ -633,17 +633,64 @@ export default function App() {
                     <TrendingDown className="text-red-500 mb-1" size={24} />
                   </div>
                 </div>
-                <div className="bg-blue-600 p-6 rounded-2xl text-white shadow-xl shadow-blue-100 flex flex-col justify-between">
+                {/* --- Card Desempeño Total con Sparkline y Delta --- */}
+                <div className="bg-blue-600 p-6 rounded-2xl text-white shadow-xl shadow-blue-100 flex flex-col justify-between relative overflow-hidden">
                   <p className="text-[10px] font-black text-blue-200 uppercase tracking-[0.2em] mb-1">Desempeño Total</p>
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-4xl font-black tracking-tighter">
-                      {data.length > 0 ? Math.round((data.filter(k => {
-                         const { status } = getKpiStatus(k, filters.year, filters.month, filters.week);
-                         return status === 'green';
-                      }).length / data.length) * 100) : 0}%
-                    </h3>
-                    <Zap size={24} className="text-yellow-300" />
-                  </div>
+                  {/* Simulación de datos de tendencia semanal */}
+                  {(() => {
+                    // Simular OEE de los últimos 7 días (en un caso real, esto vendría de un endpoint)
+                    const today = new Date();
+                    const trendData = Array.from({ length: 7 }).map((_, i) => {
+                      const d = new Date(today);
+                      d.setDate(today.getDate() - (6 - i));
+                      // Simular OEE: usar el porcentaje de KPIs en verde ese día (o random si no hay histórico)
+                      // Aquí solo para demo, usar el valor actual +/- una pequeña variación
+                      const base = data.length > 0 ? Math.round((data.filter(k => {
+                        const { status } = getKpiStatus(k, filters.year, filters.month, (parseInt(filters.week) - (6 - i)).toString().padStart(2, '0'));
+                        return status === 'green';
+                      }).length / data.length) * 100) : 0;
+                      // Simulación: si no hay datos, variar aleatoriamente
+                      return {
+                        fecha: d.toISOString().slice(0, 10),
+                        oee: base + (Math.random() * 4 - 2) // +/-2% aleatorio
+                      };
+                    });
+                    const oeeActual = trendData[6]?.oee ?? 0;
+                    const oeeAnterior = trendData[5]?.oee ?? 0;
+                    const delta = oeeActual - oeeAnterior;
+                    const meta = 85;
+                    return (
+                      <>
+                        <div className="flex flex-col items-start mb-2">
+                          <div className="flex items-baseline gap-2">
+                            <div className="relative flex flex-col items-start">
+                              <h3 className="text-4xl font-black tracking-tighter leading-none" style={{ minWidth: '90px', width: 'fit-content', textAlign: 'left' }}>{Math.round(oeeActual)}%</h3>
+                              {/* Sparkline del mismo ancho que el número */}
+                              <div style={{ width: '90px', maxWidth: '100%' }} className="mt-1 h-6 flex items-center justify-start">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <LineChart data={trendData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                                    <ReferenceLine y={meta} stroke="#fbbf24" strokeDasharray="4 2" label={{ value: 'Meta', position: 'right', fill: '#fbbf24', fontSize: 10, fontWeight: 700 }} />
+                                    <Line type="monotone" dataKey="oee" stroke="#fff" strokeWidth={2.2} dot={false} isAnimationActive={true} />
+                                  </LineChart>
+                                </ResponsiveContainer>
+                              </div>
+                            </div>
+                            {/* Indicador Delta */}
+                            <span className={
+                              "flex items-center text-xs font-bold ml-2 " +
+                              (delta > 0 ? 'text-green-300' : delta < 0 ? 'text-red-300' : 'text-blue-200')
+                            }>
+                              {delta > 0 && <TrendingUp size={16} className="mr-1" />}
+                              {delta < 0 && <TrendingDown size={16} className="mr-1" />}
+                              {delta === 0 && <span className="mr-1">→</span>}
+                              {delta > 0 ? `+${delta.toFixed(1)}%` : delta < 0 ? `${delta.toFixed(1)}%` : '0.0%'}
+                            </span>
+                          </div>
+                          <Zap size={24} className="text-yellow-300 ml-2" />
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
