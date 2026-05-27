@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Shield, 
   CheckCircle, 
@@ -15,8 +15,11 @@ import {
   Leaf, 
   BarChart3, 
   Calendar,
+  Clock,
   Download,
   Edit3,
+  Eye,
+  EyeOff,
   X,
   ChevronLeft,
   Zap,
@@ -81,10 +84,11 @@ interface KpiCardProps {
   role: UserRole;
   onEdit: (kpi: Kpi) => void;
   onViewDetails: (kpi: Kpi) => void;
+  onToggleVisibility?: (kpi: Kpi) => void;
   key?: React.Key;
 }
 
-const KpiCard = ({ kpi, currentValue, currentComment, role, onEdit, onViewDetails }: KpiCardProps) => {
+const KpiCard = ({ kpi, currentValue, currentComment, role, onEdit, onViewDetails, onToggleVisibility }: KpiCardProps) => {
   const calculateStatus = (k: Kpi, val: number): Status => {
     const ratio = k.dir === 1 ? val / k.target : k.target / val;
     if (ratio >= 0.98) return 'green';
@@ -93,47 +97,70 @@ const KpiCard = ({ kpi, currentValue, currentComment, role, onEdit, onViewDetail
   };
 
   const status = calculateStatus(kpi, currentValue);
-  const accentColor = status === 'green' ? '#22c55e' : (status === 'yellow' ? '#f59e0b' : '#ef4444');
+  const categoryColor = SQCDP_CATEGORIES[kpi.cat]?.color || '#60a5fa';
 
   return (
     <motion.div 
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all h-full"
+      className="bg-white rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all h-[280px] min-h-[280px] flex flex-col justify-between"
     >
-      <div className="absolute left-0 top-0 bottom-0 w-1.5" style={{ backgroundColor: accentColor }}></div>
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <div className="w-4/5">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{kpi.label}</h4>
+      <div className="absolute left-0 top-4 bottom-4 w-3 rounded-r-full" style={{ backgroundColor: categoryColor }}></div>
+      <div className="p-5 pl-8 flex-1 flex flex-col justify-between">
+        <div className="flex justify-between items-start mb-3 gap-2">
+          <div className="max-w-[80%]">
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-white font-black text-xs"
+                style={{ backgroundColor: SQCDP_CATEGORIES[kpi.cat]?.color }}
+              >
+                {kpi.cat}
+              </div>
+              <div>
+                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] leading-snug">{kpi.label}</h4>
+                <p className="text-[9px] font-black text-slate-400 uppercase">{SQCDP_CATEGORIES[kpi.cat]?.label}</p>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-1">
+          <div className="flex items-center gap-2 text-slate-500">
             <button 
               onClick={() => onViewDetails(kpi)}
-              className="text-slate-500 hover:text-slate-700 transition-colors p-1"
+              className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+              title="Ver historial"
             >
-              <History size={14} />
+              <Clock size={16} />
             </button>
             {role !== 'viewer' && (
               <button 
                 onClick={() => onEdit(kpi)} 
-                className="text-slate-500 hover:text-blue-600 transition-colors p-1"
+                className="p-2 rounded-full hover:bg-slate-100 transition-colors"
               >
-                <Edit3 size={14} />
+                <Edit3 size={16} />
+              </button>
+            )}
+            {role === 'admin' && (
+              <button
+                onClick={() => onToggleVisibility && onToggleVisibility(kpi)}
+                className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+                title={kpi.is_visible_top ? 'Ocultar en Top' : 'Mostrar en Top'}
+              >
+                {kpi.is_visible_top ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
             )}
           </div>
         </div>
-        <div className="flex items-baseline gap-1 mt-1">
-          <span className="text-2xl font-black text-slate-800 tracking-tighter">{currentValue ?? '-'}</span>
-          <span className="text-[10px] text-slate-400 font-bold uppercase">{kpi.unit}</span>
+
+        <div className="mt-3">
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-black text-slate-900 tracking-tight">{currentValue ?? '-'}</span>
+            <span className="text-xs uppercase font-black text-slate-400 tracking-[0.35em]">{kpi.unit}</span>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500 font-bold">{currentComment || 'Sin registro'}</p>
         </div>
-        <div className="mt-2 text-[10px] text-slate-500 font-medium line-clamp-1 h-4">
-          {currentComment || 'Sin registro'}
-        </div>
-        <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-50">
-          <span className="text-[10px] text-slate-400 font-bold">Meta: {kpi.target}</span>
+
+        <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Meta: {kpi.target}</span>
           <StatusBadge status={status} />
         </div>
       </div>
@@ -150,6 +177,9 @@ export default function App() {
   const [role, setRole] = useState<UserRole>('viewer');
   const [editingKpi, setEditingKpi] = useState<Kpi | null>(null);
   const [viewingKpiDetails, setViewingKpiDetails] = useState<Kpi | null>(null);
+  const [toast, setToast] = useState<{ message: string; type?: 'error' | 'info' } | null>(null);
+  const [confirmToggle, setConfirmToggle] = useState<Kpi | null>(null);
+  const LS_KEY = 'kpi_visible_top_map_v1';
 
   // Estados de filtros
   const [filters, setFilters] = useState({
@@ -170,6 +200,58 @@ export default function App() {
     else if (ratio >= 0.90) status = 'yellow';
     
     return { value: val, comment: record.comment, status };
+  };
+
+  // Evaluador ACR: si hay 2 tendencias seguidas negativas en los últimos 3 periodos marcar requiere_acr
+  const evaluateACR = (k: Kpi) => {
+    const hist = [...k.history].sort((a, b) => (`${a.year}-${a.month}-W${a.week}`).localeCompare(`${b.year}-${b.month}-W${b.week}`));
+    if (hist.length < 3) return false;
+    const last3 = hist.slice(-3);
+    const v1 = last3[0].value;
+    const v2 = last3[1].value;
+    const v3 = last3[2].value;
+
+    // cambios consecutivos
+    const delta1 = v2 - v1;
+    const delta2 = v3 - v2;
+
+    // para dir === 1, tendencia negativa es delta < 0, para dir === -1 negativa es delta > 0
+    const neg1 = k.dir === 1 ? delta1 < 0 : delta1 > 0;
+    const neg2 = k.dir === 1 ? delta2 < 0 : delta2 > 0;
+
+    // además exigir que los dos últimos periodos estén por fuera de umbral de cumplimiento (ej. <98%)
+    const ratio2 = k.dir === 1 ? v2 / k.target : k.target / v2;
+    const ratio3 = k.dir === 1 ? v3 / k.target : k.target / v3;
+    const belowThreshold = ratio2 < 0.98 && ratio3 < 0.98;
+
+    return neg1 && neg2 && belowThreshold;
+  };
+
+  // derive processed data with ACR flags
+  const processedData = useMemo(() => {
+    return data.map(k => ({ ...k, requiere_acr: evaluateACR(k) }));
+  }, [data]);
+
+  // Cargar visibilidad desde localStorage al iniciar
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return;
+      const map: Record<string, boolean> = JSON.parse(raw);
+      if (Object.keys(map).length === 0) return;
+      setData(prev => prev.map(k => ({ ...k, is_visible_top: map[k.id] ?? !!k.is_visible_top })));
+    } catch (err) {
+      console.warn('Error leyendo visibilidad KPIs de localStorage', err);
+    }
+  }, []);
+
+  const persistVisibilityMap = (arr: Kpi[]) => {
+    try {
+      const map = arr.reduce((acc: Record<string, boolean>, k) => { acc[k.id] = !!k.is_visible_top; return acc; }, {});
+      localStorage.setItem(LS_KEY, JSON.stringify(map));
+    } catch (err) {
+      console.warn('Error guardando visibilidad KPIs en localStorage', err);
+    }
   };
 
   // Cálculos globales
@@ -204,6 +286,7 @@ export default function App() {
     const selectedMonth = formData.get('month') as string;
     const selectedWeek = formData.get('week') as string;
     const newTarget = role === 'admin' ? parseFloat(formData.get('target') as string) : editingKpi.target;
+    const newCatRaw = formData.get('cat') as SqcdpCat | null;
 
     setData(prev => prev.map(kpi => {
       if (kpi.id !== editingKpi.id) return kpi;
@@ -230,6 +313,7 @@ export default function App() {
       return {
         ...kpi,
         target: newTarget,
+        cat: newCatRaw ?? kpi.cat,
         history
       };
     }));
@@ -272,6 +356,25 @@ export default function App() {
     if (confirm('¿Estás seguro de eliminar este indicador?')) {
       setData(prev => prev.filter(k => k.id !== id));
     }
+  };
+
+  const performToggleVisibility = (kpi: Kpi) => {
+    const currentlyVisible = !!kpi.is_visible_top;
+    if (!currentlyVisible) {
+      const count = data.filter(d => d.areaId === kpi.areaId && d.is_visible_top).length;
+      if (count >= 2) {
+        setToast({ message: 'Solo puedes destacar 2 KPIs por área. Oculta uno primero.', type: 'error' });
+        setConfirmToggle(null);
+        setTimeout(() => setToast(null), 4000);
+        return;
+      }
+    }
+
+    // Aplicar cambio y persistir inmediatamente
+    const newData = data.map(d => d.id === kpi.id ? { ...d, is_visible_top: !currentlyVisible } : d);
+    setData(newData);
+    persistVisibilityMap(newData);
+    setConfirmToggle(null);
   };
 
   const currentArea = view !== 'overview' && view !== 'master' ? areas.find(a => a.id === view) : null;
@@ -353,7 +456,7 @@ export default function App() {
                   </div>
                 </div>
               </div>
-              <div className="h-72 w-full bg-slate-50/50 rounded-3xl p-6 border border-slate-100">
+              <div className="h-72 w-full bg-slate-50/50 rounded-3xl p-6 border border-slate-100 relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -393,6 +496,16 @@ export default function App() {
                     />
                   </LineChart>
                 </ResponsiveContainer>
+                {/* ACR Alert: mostrar aquí si requiere_acr */}
+                {kpi.requiere_acr && (
+                  <div className="absolute right-8 top-24 bg-white rounded-md shadow-2xl p-3 border border-red-100 w-52">
+                    <div className="text-xs font-black text-red-600 uppercase">⚠️ Generar ACR</div>
+                    <div className="text-[12px] text-slate-600 mt-2">Este KPI ha mostrado 2 tendencias negativas consecutivas. Inicia Análisis de Causa Raíz.</div>
+                    <div className="mt-3 flex justify-end">
+                      <button className="px-3 py-1 rounded-xl bg-red-600 text-white font-black text-sm">Generar ACR</button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -694,6 +807,43 @@ export default function App() {
                 </div>
               </div>
 
+              {/* --- Top KPIs Section (Visibilidad Top) --- */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">KPIs Destacados</h2>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Visibilidad Principal por Área</p>
+                  </div>
+                </div>
+                <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar mask-linear-right">
+                  {areas.flatMap(area => {
+                    const topKpis = processedData.filter(k => k.areaId === area.id && k.is_visible_top).slice(0, 2);
+                    return topKpis.map(kpi => {
+                      const { value, comment } = getKpiStatus(kpi, filters.year, filters.month, filters.week);
+                      return (
+                        <div key={kpi.id} className="min-w-[280px] w-[280px] flex-shrink-0">
+                          <KpiCard
+                            kpi={kpi}
+                            currentValue={value}
+                            currentComment={comment}
+                            role={role}
+                            onEdit={(k) => setEditingKpi(k)}
+                            onViewDetails={(k) => setViewingKpiDetails(k)}
+                            onToggleVisibility={(k) => setConfirmToggle(k)}
+                          />
+                        </div>
+                      );
+                    });
+                  })}
+                  {processedData.filter(k => k.is_visible_top).length === 0 && (
+                     <div className="w-full bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col items-center justify-center p-6 h-[280px] text-slate-500 transition-all">
+                       <Info size={18} className="mb-3" />
+                       <span className="text-[9px] font-black uppercase text-center">No hay KPIs destacados</span>
+                     </div>
+                  )}
+                </div>
+              </div>
+
               {/* Global Performance Chart Section */}
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
@@ -838,7 +988,7 @@ export default function App() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {data.filter(k => k.areaId === area.id).map(kpi => (
+                      {processedData.filter(k => k.areaId === area.id).map(kpi => (
                         <div key={kpi.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group hover:border-blue-200 transition-all">
                           <div className="flex items-center gap-3">
                             <div 
@@ -852,7 +1002,16 @@ export default function App() {
                               <p className="text-[9px] font-bold text-slate-400 uppercase">Meta: {kpi.target} {kpi.unit}</p>
                             </div>
                           </div>
-                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            {role === 'admin' && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setConfirmToggle(kpi); }}
+                                className="p-2 text-slate-500 hover:text-slate-800 transition-colors"
+                                title={kpi.is_visible_top ? 'Ocultar en Top' : 'Mostrar en Top'}
+                              >
+                                {kpi.is_visible_top ? <Eye size={16} /> : <EyeOff size={16} />}
+                              </button>
+                            )}
                             <button onClick={() => setEditingKpi(kpi)} className="p-2 text-slate-500 hover:text-blue-600 transition-colors"><Edit3 size={16}/></button>
                             <button onClick={() => handleDeleteKpi(kpi.id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
                           </div>
@@ -889,64 +1048,152 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                {(['S', 'Q', 'C', 'D', 'P'] as SqcdpCat[]).map(catLetter => {
-                  const catKpis = data.filter(k => k.areaId === view && k.cat === catLetter);
-                  const config = SQCDP_CATEGORIES[catLetter];
-                  return (
-                    <div key={catLetter} className="flex flex-col gap-4">
-                      <div className="group relative">
-                        <div className="absolute inset-0 bg-white shadow-sm border border-slate-200 rounded-2xl translate-y-1 translate-x-1" />
-                        <div className="relative flex flex-col gap-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5">
-                          <div className="flex items-center justify-between">
-                            <div 
-                              className="w-8 h-8 flex items-center justify-center rounded-lg text-white font-black text-sm shadow-md"
-                              style={{ backgroundColor: config.color }}
-                            >
-                              {catLetter}
-                            </div>
-                            <span className="text-[9px] font-black text-slate-400 uppercase">{catKpis.length} KPIs</span>
-                          </div>
-                          <div className="mt-2">
-                             <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest leading-none">{config.label}</span>
-                             <p className="text-[9px] text-slate-400 mt-0.5">{config.description}</p>
-                          </div>
-                        </div>
-                      </div>
+              {(() => {
+                const selected = processedData.filter(k => k.areaId === view && k.is_visible_top).slice(0, 2);
+                const areaKpis = processedData.filter(k => k.areaId === view);
+                const hiddenKpis = areaKpis.filter(k => !k.is_visible_top);
 
-                      <div className="space-y-4">
-                        {catKpis.length > 0 ? (
-                          catKpis.map(k => {
-                            const { value, comment } = getKpiStatus(k, filters.year, filters.month, filters.week);
-                            return (
-                              <KpiCard 
-                                key={k.id} 
-                                kpi={k} 
-                                currentValue={value}
-                                currentComment={comment}
-                                role={role} 
-                                onEdit={(kpi) => setEditingKpi(kpi)} 
-                                onViewDetails={(kpi) => setViewingKpiDetails(kpi)}
-                              />
-                            );
-                          })
-                        ) : (
-                          <div className="h-24 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center grayscale opacity-45 p-4 transition-all hover:opacity-60">
-                            <Info size={18} className="text-slate-500 mb-1" />
-                            <span className="text-[9px] font-black text-slate-500 uppercase text-center">Sin indicadores</span>
+                if (role === 'admin') {
+                  return (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {(['S', 'Q', 'C', 'D', 'P'] as SqcdpCat[]).map(catLetter => {
+                        const catKpis = areaKpis.filter(k => k.cat === catLetter);
+                        const config = SQCDP_CATEGORIES[catLetter];
+                        return (
+                          <div key={catLetter} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="p-5 border-b border-slate-100 flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-3xl flex items-center justify-center text-white font-black" style={{ backgroundColor: config.color }}>
+                                  {catLetter}
+                                </div>
+                                <div>
+                                  <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-800">{config.label}</p>
+                                  <p className="text-[10px] text-slate-400">{catKpis.length} KPI{catKpis.length === 1 ? '' : 's'}</p>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">{catKpis.length} KPI{catKpis.length === 1 ? '' : 's'}</span>
+                            </div>
+                            <div className="p-5 space-y-4">
+                              {catKpis.length > 0 ? catKpis.map(k => {
+                                const { value, comment } = getKpiStatus(k, filters.year, filters.month, filters.week);
+                                return (
+                                  <KpiCard
+                                    key={k.id}
+                                    kpi={k}
+                                    currentValue={value}
+                                    currentComment={comment}
+                                    role={role}
+                                    onEdit={(kpi) => setEditingKpi(kpi)}
+                                    onViewDetails={(kpi) => setViewingKpiDetails(kpi)}
+                                    onToggleVisibility={(kpi) => setConfirmToggle(kpi)}
+                                  />
+                                );
+                              }) : (
+                                <div className="h-32 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">
+                                  Sin indicadores
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
+                        );
+                      })}
                     </div>
                   );
-                })}
-              </div>
+                }
+
+                // Visor view: mostrar resumen SQCDP + KPIs destacados
+                return (
+                  <>
+                    {/* Resumen por categoría SQCDP */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+                      {(['S', 'Q', 'C', 'D', 'P'] as SqcdpCat[]).map(catLetter => {
+                        const catKpis = areaKpis.filter(k => k.cat === catLetter);
+                        const config = SQCDP_CATEGORIES[catLetter];
+                        return (
+                          <div key={catLetter} className="bg-white rounded-[2rem] border border-slate-200 p-5 shadow-sm flex flex-col justify-between h-full">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="w-10 h-10 rounded-3xl flex items-center justify-center text-white font-black" style={{ backgroundColor: config.color }}>
+                                {catLetter}
+                              </div>
+                              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{catKpis.length} KPIs</span>
+                            </div>
+                            <div className="mt-4">
+                              <p className="text-xs font-black uppercase tracking-[0.24em] text-slate-800">{config.label}</p>
+                              <p className="text-[10px] text-slate-400 mt-1">{config.description}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* KPIs destacados */}
+                    {selected.length === 0 ? (
+                      <div className="bg-white p-10 rounded-[2rem] border border-slate-200 shadow-sm text-center">
+                        <div className="text-slate-500 text-sm font-black uppercase tracking-[0.24em] mb-4">No hay KPIs destacados</div>
+                        <p className="text-[13px] text-slate-500 max-w-xl mx-auto">El Visor solo muestra los indicadores top. Admin puede elegirlos desde la vista de administración.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {selected.map(k => {
+                          const { value, comment } = getKpiStatus(k, filters.year, filters.month, filters.week);
+                          return (
+                            <KpiCard
+                              key={k.id}
+                              kpi={k}
+                              currentValue={value}
+                              currentComment={comment}
+                              role={role}
+                              onEdit={(kpi) => setEditingKpi(kpi)}
+                              onViewDetails={(kpi) => setViewingKpiDetails(kpi)}
+                              onToggleVisibility={(kpi) => setConfirmToggle(kpi)}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </motion.div>
           )}
         </AnimatePresence>
       </main>
 
       <AnimatePresence>
+        {confirmToggle && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmToggle(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white rounded-[1rem] w-full max-w-md shadow-2xl overflow-hidden border border-slate-200"
+            >
+              <div className="p-6">
+                <h3 className="text-lg font-black text-slate-800">{confirmToggle.is_visible_top ? 'Ocultar KPI del Top' : 'Mostrar KPI en Top'}</h3>
+                <p className="text-[12px] text-slate-500 mt-2">¿Deseas {confirmToggle.is_visible_top ? 'ocultar' : 'mostrar'} <strong>{confirmToggle.label}</strong> en la sección superior?</p>
+                <div className="mt-6 flex gap-3 justify-end">
+                  <button onClick={() => setConfirmToggle(null)} className="px-4 py-2 rounded-xl border border-slate-200 font-black text-slate-600">Cancelar</button>
+                  <button onClick={() => performToggleVisibility(confirmToggle)} className="px-4 py-2 rounded-xl bg-blue-600 text-white font-black">Confirmar</button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {toast && (
+          <div className="fixed right-6 bottom-6 z-60">
+            <div className={cn('px-4 py-3 rounded-xl shadow-lg text-white font-black', toast.type === 'error' ? 'bg-red-600' : 'bg-slate-800')}>
+              {toast.message}
+            </div>
+          </div>
+        )}
         {viewingKpiDetails && <KpiDetailsView kpi={viewingKpiDetails} />}
       </AnimatePresence>
 
@@ -1143,6 +1390,18 @@ export default function App() {
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none h-28 resize-none transition-all" 
                     placeholder="Describe la desviación o acción correctiva..."
                   ></textarea>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Pilar (SQCDP)</label>
+                    <select name="cat" defaultValue={editingKpi.cat} disabled={role !== 'admin'} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all appearance-none">
+                      <option value="S">Seguridad (S)</option>
+                      <option value="Q">Calidad (Q)</option>
+                      <option value="C">Costos (C)</option>
+                      <option value="D">Entrega (D)</option>
+                      <option value="P">Personas (P)</option>
+                    </select>
+                  </div>
                 </div>
                 <button 
                   type="submit" 

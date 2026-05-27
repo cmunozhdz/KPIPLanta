@@ -22,6 +22,10 @@ export interface Kpi {
   dir: 1 | -1; // 1: higher is better, -1: lower is better
   unit: string;
   history: KpiHistory[];
+  // Optional properties used by the dashboard enhancements
+  is_visible_top?: boolean;
+  requiere_acr?: boolean;
+  tendencia_actual?: 'up' | 'down' | 'stable';
 }
 
 export interface Area {
