@@ -13,8 +13,11 @@
 		3000
 	],
 	"mounts": [
+		//genera los volumenes para que los archivos con los ssh key se compartan entre el contenedor y el host.
 		"source=${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,consistency=cached",
-		"source=tablero-planta-node-modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
+		"source=${localEnv:HOME}/.ssh,target=/home/node/.ssh,type=bind,readonly",
+		// Esto sobreescribe la carpeta del host con un volumen aislado en Docker
+		"source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
 	],
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "npm install",
