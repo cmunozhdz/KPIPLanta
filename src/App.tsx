@@ -64,12 +64,12 @@ const StatusBadge = ({ status }: { status: Status }) => {
   );
 };
 
-const IconWrapper = ({ name, size = 18, className }: { name: string, size?: number, className?: string }) => {
+const IconWrapper = ({ name, size = 20, className }: { name: string, size?: number, className?: string }) => {
   const icons: Record<string, any> = {
     Shield, CheckCircle, Leaf, Factory, Settings, Package, Users, Zap, Target
   };
   const Icon = icons[name] || Info;
-  return <Icon size={size} className={className} />;
+  return <Icon size={size} className={cn("text-slate-700", className)} />;
 };
 
 // --- KPI Card Component ---
@@ -111,16 +111,16 @@ const KpiCard = ({ kpi, currentValue, currentComment, role, onEdit, onViewDetail
           <div className="flex gap-1">
             <button 
               onClick={() => onViewDetails(kpi)}
-              className="text-slate-300 hover:text-slate-600 transition-colors p-1"
+              className="text-slate-500 hover:text-slate-700 transition-colors p-1"
             >
-              <History size={12} />
+              <History size={14} />
             </button>
             {role !== 'viewer' && (
               <button 
                 onClick={() => onEdit(kpi)} 
-                className="text-slate-300 hover:text-blue-600 transition-colors p-1"
+                className="text-slate-500 hover:text-blue-600 transition-colors p-1"
               >
-                <Edit3 size={12} />
+                <Edit3 size={14} />
               </button>
             )}
           </div>
@@ -463,7 +463,7 @@ export default function App() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-200">
-                <BarChart3 className="text-white" size={20} />
+                <BarChart3 className="text-white" size={24} />
               </div>
               <h1 className="text-2xl font-black text-slate-800 tracking-tight">KPI Planta Polak</h1>
             </div>
@@ -505,7 +505,7 @@ export default function App() {
             {/* Filtros Temporales */}
             <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
               <div className="flex items-center gap-2 pr-3 border-r border-slate-200">
-                <Calendar size={14} className="text-slate-400" />
+                <Calendar size={16} className="text-slate-600" />
                 <select 
                   value={filters.year}
                   onChange={(e) => setFilters(f => ({ ...f, year: e.target.value }))}
@@ -522,7 +522,7 @@ export default function App() {
                 {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
               <div className="flex items-center gap-1 pl-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase">W</span>
+                <span className="text-[10px] font-black text-slate-500 uppercase">W</span>
                 <select 
                   value={filters.week}
                   onChange={(e) => setFilters(f => ({ ...f, week: e.target.value }))}
@@ -534,7 +534,7 @@ export default function App() {
             </div>
 
             <button className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95 ml-auto md:ml-0">
-              <Download size={14} /> Exportar WCM
+              <Download size={16} /> Exportar WCM
             </button>
           </div>
         </div>
@@ -566,7 +566,7 @@ export default function App() {
                     : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
                 )}
               >
-                <IconWrapper name={area.icon} size={14} />
+                <IconWrapper name={area.icon} size={16} />
                 {area.name}
               </button>
             ))}
@@ -580,7 +580,7 @@ export default function App() {
                     : 'bg-white text-blue-500 border-blue-200 hover:border-blue-300'
                 )}
               >
-                <Database size={14} />
+                <Database size={16} />
                 Datos Maestros
               </button>
             )}
@@ -714,7 +714,7 @@ export default function App() {
                   >
                     <div className="flex justify-between items-center mb-4">
                       <div className="p-2.5 bg-slate-50 rounded-xl group-hover:bg-blue-50 transition-colors">
-                        <IconWrapper name={area.icon} size={18} className="text-slate-600 group-hover:text-blue-600" />
+                        <IconWrapper name={area.icon} size={20} className="text-slate-700 group-hover:text-blue-600" />
                       </div>
                       <span className={cn(
                         "text-[11px] font-black px-2.5 py-1 rounded-lg",
@@ -762,7 +762,7 @@ export default function App() {
                   onClick={() => setIsAddingArea(true)}
                   className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-all"
                 >
-                  <Plus size={16} /> Nueva Área
+                  <Plus size={18} /> Nueva Área
                 </button>
               </div>
 
@@ -772,7 +772,7 @@ export default function App() {
                     <div className="flex justify-between items-start mb-6">
                       <div className="flex items-center gap-3">
                          <div className="p-3 bg-slate-100 rounded-2xl">
-                            <IconWrapper name={area.icon} size={24} className="text-slate-600" />
+                            <IconWrapper name={area.icon} size={28} className="text-slate-700" />
                          </div>
                          <div>
                             <h3 className="text-xl font-black text-slate-800 tracking-tighter uppercase">{area.name}</h3>
@@ -786,7 +786,7 @@ export default function App() {
                         }}
                         className="relative z-50 bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm"
                       >
-                        <Plus size={14} className="inline mr-1" /> KPI
+                        <Plus size={16} className="inline mr-1" /> KPI
                       </button>
                     </div>
 
@@ -806,8 +806,8 @@ export default function App() {
                             </div>
                           </div>
                           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => setEditingKpi(kpi)} className="p-2 text-slate-400 hover:text-blue-600 transition-colors"><Edit3 size={14}/></button>
-                            <button onClick={() => handleDeleteKpi(kpi.id)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={14}/></button>
+                            <button onClick={() => setEditingKpi(kpi)} className="p-2 text-slate-500 hover:text-blue-600 transition-colors"><Edit3 size={16}/></button>
+                            <button onClick={() => handleDeleteKpi(kpi.id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={16}/></button>
                           </div>
                         </div>
                       ))}
@@ -828,13 +828,13 @@ export default function App() {
                 <div className="flex items-center gap-4">
                   <button 
                     onClick={() => setView('overview')} 
-                    className="p-3 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+                    className="p-3 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
                   >
-                    <ChevronLeft size={20} />
+                    <ChevronLeft size={24} />
                   </button>
                   <div>
                     <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter flex items-center gap-3">
-                      {currentArea && <IconWrapper name={currentArea.icon} size={28} className="text-blue-600" />}
+                      {currentArea && <IconWrapper name={currentArea.icon} size={32} className="text-blue-600" />}
                       Pilar {currentArea?.name}
                     </h2>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Análisis Multidimensional SQCDP</p>
@@ -884,9 +884,9 @@ export default function App() {
                             );
                           })
                         ) : (
-                          <div className="h-24 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center grayscale opacity-40 p-4 transition-all hover:opacity-60">
-                            <Info size={16} className="text-slate-400 mb-1" />
-                            <span className="text-[9px] font-black text-slate-400 uppercase text-center">Sin indicadores</span>
+                          <div className="h-24 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center grayscale opacity-45 p-4 transition-all hover:opacity-60">
+                            <Info size={18} className="text-slate-500 mb-1" />
+                            <span className="text-[9px] font-black text-slate-500 uppercase text-center">Sin indicadores</span>
                           </div>
                         )}
                       </div>

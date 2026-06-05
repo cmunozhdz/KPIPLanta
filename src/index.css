@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+@layer base {
+  html {
+    font-size: 115%;
+  }
+
+  body {
+    font-size: 1rem;
+  }
+}
+
+@layer utilities {
+  .text-\[9px\] {
+    font-size: calc(9px * 1.15) !important;
+  }
+
+  .text-\[10px\] {
+    font-size: calc(10px * 1.15) !important;
+  }
+
+  .text-\[11px\] {
+    font-size: calc(11px * 1.15) !important;
+  }
+}
