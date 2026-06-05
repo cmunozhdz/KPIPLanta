@@ -807,43 +807,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* --- Top KPIs Section (Visibilidad Top) --- */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-xl font-black text-slate-800 uppercase tracking-tighter">KPIs Destacados</h2>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Visibilidad Principal por Área</p>
-                  </div>
-                </div>
-                <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar mask-linear-right">
-                  {areas.flatMap(area => {
-                    const topKpis = processedData.filter(k => k.areaId === area.id && k.is_visible_top).slice(0, 2);
-                    return topKpis.map(kpi => {
-                      const { value, comment } = getKpiStatus(kpi, filters.year, filters.month, filters.week);
-                      return (
-                        <div key={kpi.id} className="min-w-[280px] w-[280px] flex-shrink-0">
-                          <KpiCard
-                            kpi={kpi}
-                            currentValue={value}
-                            currentComment={comment}
-                            role={role}
-                            onEdit={(k) => setEditingKpi(k)}
-                            onViewDetails={(k) => setViewingKpiDetails(k)}
-                            onToggleVisibility={(k) => setConfirmToggle(k)}
-                          />
-                        </div>
-                      );
-                    });
-                  })}
-                  {processedData.filter(k => k.is_visible_top).length === 0 && (
-                     <div className="w-full bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col items-center justify-center p-6 h-[280px] text-slate-500 transition-all">
-                       <Info size={18} className="mb-3" />
-                       <span className="text-[9px] font-black uppercase text-center">No hay KPIs destacados</span>
-                     </div>
-                  )}
-                </div>
-              </div>
-
               {/* Global Performance Chart Section */}
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
