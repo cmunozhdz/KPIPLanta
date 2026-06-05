@@ -1,3 +1,6 @@
+> **Contexto / Prompt Original:**
+> *"Actua como un backen developer de los mocks de muestra un listado de las apis services que neceistamos impllementar"* y posteriormente *"genera un md para dejarlo documentado para compartir al equipo de backend"*
+
 # Documentación de Servicios API Backend (Tablero Planta)
 
 Este documento describe los servicios REST (APIs) necesarios a implementar por el equipo de Backend para soportar las funcionalidades del Tablero de KPIs Planta Polak.

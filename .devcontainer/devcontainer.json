@@ -1,7 +1,6 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/javascript-node
+// For format details, see https://aka.ms/devcontainer.json.
 {
-	"name": "KPI-PLANTA",
+	"name": "KPI-PLANTA (Senior Fullstack React Dev)",
 	"build": {
 		"dockerfile": "Dockerfile"
 	},
@@ -9,33 +8,80 @@
 		"--name",
 		"KPI-PLANTA"
 	],
+	// Forwarding React Dev Server (3000) and Backend Express/Fullstack Servers (5000 / 8080)
 	"forwardPorts": [
-		3000
+		3000,
+		5000,
+		8080
 	],
+	"portsAttributes": {
+		"3000": {
+			"label": "React Vite App",
+			"onAutoForward": "notify"
+		},
+		"5000": {
+			"label": "Express API Server",
+			"onAutoForward": "silent"
+		},
+		"8080": {
+			"label": "Alternative API Server",
+			"onAutoForward": "silent"
+		}
+	},
 	"mounts": [
 		"source=${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,consistency=cached",
 		"source=tablero-planta-node-modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
 	],
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "npm install",
-	// Configure tool-specific properties.
+	// VS Code Customizations tailored for Senior React + Fullstack TSX Developers
 	"customizations": {
-		// Configure properties specific to VS Code.
 		"vscode": {
-			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
+				// Code formatting and linting
 				"esbenp.prettier-vscode",
 				"dbaeumer.vscode-eslint",
-				"GitHub.vscode-pull-request-github",
-				"bradlc.vscode-tailwindcss",
-				"dsznajder.es7-react-js-snippets"
+				// React / TypeScript enhancements (Crucial for productivity)
+				"dsznajder.es7-react-js-snippets",
+				"YoavBls.pretty-ts-errors", // Formats complex TypeScript errors into beautiful human-readable blocks
+				"usernamehw.errorlens", // Highlights compiler warnings/errors inline in the editor instantly
+				// Styling
+				"bradlc.vscode-tailwindcss", // Tailwind CSS IntelliSense & Linting
+				// Utilities & Productivity
+				"formulahendry.auto-rename-tag",
+				"christian-kohler.path-intellisense",
+				"mikestead.dotenv",
+				"redhat.vscode-yaml",
+				// Git & Docker integration
+				"eamodio.gitlens", // Senior-grade git blame & history
+				"ms-azuretools.vscode-docker"
 			],
 			"settings": {
+				// Editor formatting
 				"editor.defaultFormatter": "esbenp.prettier-vscode",
-				"editor.formatOnSave": true
+				"editor.formatOnSave": true,
+				"editor.formatOnPaste": false,
+				// Auto-lint and auto-fix eslint rules on save
+				"editor.codeActionsOnSave": {
+					"source.fixAll.eslint": "explicit",
+					"source.organizeImports": "explicit"
+				},
+				// UI enhancements
+				"editor.bracketPairColorization.enabled": true,
+				"editor.guides.bracketPairs": "active",
+				"editor.minimap.enabled": false,
+				// TypeScript/JavaScript auto-imports and strict checks
+				"typescript.tsdk": "node_modules/typescript/lib",
+				"javascript.suggest.autoImports": true,
+				"typescript.suggest.autoImports": true,
+				"javascript.updateImportsOnFileMove.enabled": "always",
+				"typescript.updateImportsOnFileMove.enabled": "always",
+				// Tailwind CSS configuration
+				"tailwindCSS.emmetCompletions": true,
+				// Terminal configuration inside container
+				"terminal.integrated.defaultProfile.linux": "zsh"
 			}
 		}
 	},
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-container-features-non-root.
 	"remoteUser": "node"
 }
