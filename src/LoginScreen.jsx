@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, Lock, Mail, Chrome } from 'lucide-react';
+import logoPolak from './assets/logoGP.png'; // Importación dinámica
+export function Header() {
+  return (
+    <header>
+      <img src={logoPolak} alt="Logo de Polak Grupo" />
+    </header>
+  );
+}
 
 export default function LoginScreen({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
@@ -78,7 +86,7 @@ export default function LoginScreen({ onLoginSuccess }) {
     try {
       const jwt = response.credential;
       console.log('Google credential response recibida. Token JWT:', jwt);
-      
+
       const payload = JSON.parse(atob(jwt.split('.')[1]));
       const userEmail = payload.email;
 
@@ -183,17 +191,10 @@ export default function LoginScreen({ onLoginSuccess }) {
       <div className="hidden md:flex md:w-[35%] lg:w-[40%] bg-white items-center justify-center p-8 border-r border-slate-100 shadow-xl z-10">
         <div className="text-center flex flex-col items-center max-w-xs animate-fade-in">
           {/* Logo Corporativo de Polak Grupo (SVG Premium) */}
-          <svg className="w-48 h-auto mb-6 text-[#FF152B]" viewBox="0 0 500 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 20 C20 20 20 60 20 80 C20 100 40 100 50 100 C70 100 80 80 80 80 L80 100 L110 100 L110 20 L80 20 L80 50 C80 50 70 20 50 20 Z" fill="currentColor" />
-            <circle cx="160" cy="60" r="40" stroke="currentColor" strokeWidth="20" fill="none" />
-            <path d="M230 20 L230 100 L280 100" stroke="currentColor" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M320 100 L350 20 L380 100" stroke="currentColor" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M335 65 L365 65" stroke="currentColor" strokeWidth="15" strokeLinecap="round" />
-            <path d="M420 20 L420 100 M420 60 L460 20 M420 60 L460 100" stroke="currentColor" strokeWidth="20" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <Header />
           <div className="h-[2px] w-24 bg-[#FF152B] mb-4"></div>
-          <span className="text-[12px] font-black text-[#111827] uppercase tracking-[0.4em]">Grupo Industrial</span>
-          <span className="text-[9px] font-bold text-[#6B7280] uppercase tracking-[0.2em] mt-1">Eficiencia e Innovación</span>
+          <span className="text-[12px] font-black text-[#111827] uppercase tracking-[0.4em]">Grupo Polak. </span>
+          <span className="text-[9px] font-bold text-[#6B7280] uppercase tracking-[0.2em] mt-1">Eficiencia operativa</span>
         </div>
       </div>
 

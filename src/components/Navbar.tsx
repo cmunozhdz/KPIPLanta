@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Database, Shield, Settings, Eye, CheckCircle, Leaf, Factory, Package, Users, Zap, Target, Info } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { authService } from '../services/authService';
 import { Area, UserRole } from '../types';
 
 interface NavbarProps {
@@ -47,24 +48,9 @@ export const Navbar: React.FC<NavbarProps> = ({ areas, view, setView, userEmail,
       try {
         const promises = PROFILES.map(async (profile) => {
           try {
-            const apiUrl = import.meta.env.VITE_API_URL_SEG || 'https://serviciosrest.polakgrupo.com/kiosco/Apis/IntranetSeguridad';
-            const response = await fetch(`${apiUrl}/Esvalido`, {
-              method: 'POST',
-              mode: 'cors',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                PermisosId: profile.id,
-                UserEmail: userEmail
-              })
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              if (data.PermisoExiste) {
-                results.push(profile);
-              }
+            const data = await authService.checkPermission(profile.id, userEmail);
+            if (data.PermisoExiste) {
+              results.push(profile);
             }
           } catch (error) {
             console.error(`Error verificando permiso ${profile.id}:`, error);
@@ -129,7 +115,7 @@ export const Navbar: React.FC<NavbarProps> = ({ areas, view, setView, userEmail,
                 : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
             )}
           >
-            <IconWrapper name={area.icon} size={16} className={view === area.id ? "text-white" : "text-slate-500"} />
+            <i className={cn(area.icon || "fas fa-industry", view === area.id ? "text-white" : "text-slate-500", "text-[16px]")}></i>
             {area.name}
           </button>
         ))}

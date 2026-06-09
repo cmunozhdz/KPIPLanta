@@ -54,6 +54,8 @@ import { Area, Kpi, UserRole, SqcdpCat, Status, KpiHistory } from './types';
 import { AREAS, SQCDP_CATEGORIES, INITIAL_DATA, MONTHS, YEARS, WEEKS } from './constants/data';
 import LoginScreen from './LoginScreen';
 import { Navbar } from './components/Navbar';
+import { AreasListManager } from './components/AreasListManager';
+import { areaService } from './services/areaService';
 
 // --- Utility Components ---
 
@@ -165,8 +167,10 @@ const KpiCard = ({ kpi, currentValue, currentComment, role, onEdit, onViewDetail
 // --- Main App Component ---
 
 export default function App() {
-  const [areas, setAreas] = useState<Area[]>(Object.values(AREAS));
-  const [data, setData] = useState<Kpi[]>(INITIAL_DATA);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [data, setData] = useState<Kpi[]>([]); // Initialize empty, optionally load from API later
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState<string>('overview'); // 'overview' | 'master' | ID del área
   const [user, setUser] = useState<{ email: string; role: UserRole } | null>(() => {
     try {
@@ -187,6 +191,35 @@ export default function App() {
       setRole('viewer');
     }
   }, [user]);
+
+  const fetchAreas = async () => {
+    setIsLoading(true);
+    setApiError(null);
+    try {
+      const jsonData = await areaService.getAreas();
+      if (jsonData && jsonData.Areas) {
+        const fetchedAreas: Area[] = jsonData.Areas.map((a: any) => ({
+          id: a.AreaId,
+          name: a.AreaDescripcion,
+          icon: a.AreaIcon || 'Factory',
+          color: a.AreaColor || 'slate'
+        }));
+        setAreas(fetchedAreas);
+        setData(INITIAL_DATA); // Usar datos locales temporalmente para KPIs mientras no haya API de KPIs completa
+      } else {
+        throw new Error('Formato de respuesta inválido');
+      }
+    } catch (err) {
+      console.error(err);
+      setApiError('Error de conexión con los servicios de Planta. No es posible cargar la información en este momento.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAreas();
+  }, []);
 
   const [editingKpi, setEditingKpi] = useState<Kpi | null>(null);
   const [viewingKpiDetails, setViewingKpiDetails] = useState<Kpi | null>(null);
@@ -333,17 +366,7 @@ export default function App() {
     setEditingKpi(null);
   };
 
-  const [isAddingArea, setIsAddingArea] = useState(false);
   const [addingKpiToArea, setAddingKpiToArea] = useState<string | null>(null);
-
-  const handleAddArea = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const name = formData.get('name') as string;
-    const id = name.toLowerCase().replace(/\s+/g, '-');
-    setAreas(prev => [...prev, { id, name, icon: 'Factory', color: 'slate' }]);
-    setIsAddingArea(false);
-  };
 
   const handleCreateKpi = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -660,372 +683,335 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto">
-        {/* Navegación y Perfiles Dinámicos */}
-        <Navbar 
-          areas={areas}
-          view={view}
-          setView={setView}
-          userEmail={user.email}
-          onRolesResolved={setRole}
-        />
-
-        <AnimatePresence mode="wait">
-          {view === 'overview' ? (
-            <motion.div
-              key="overview"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 10 }}
-              className="space-y-8"
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Cargando Estructura de Planta...</p>
+          </div>
+        ) : apiError ? (
+          <div className="bg-red-50 border border-red-200 rounded-3xl p-10 text-center shadow-sm">
+            <AlertTriangle className="mx-auto text-red-500 mb-4" size={48} />
+            <h2 className="text-2xl font-black text-slate-800 tracking-tighter mb-2">Servicio Temporalmente Inactivo</h2>
+            <p className="text-slate-600 font-medium mb-6 max-w-lg mx-auto">
+              {apiError}
+            </p>
+            <button
+              onClick={() => fetchAreas()}
+              className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-8 rounded-2xl shadow-xl shadow-red-200 transition-all uppercase text-[11px] tracking-widest"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-6 rounded-2xl border-l-4 border-green-500 shadow-sm group hover:shadow-md transition-all">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">KPIs en Blanco</p>
-                  <div className="flex items-end justify-between">
-                    <h3 className="text-4xl font-black text-slate-800 tracking-tighter">
-                      {data.filter(k => {
-                        const { status } = getKpiStatus(k, filters.year, filters.month, filters.week);
-                        return status === 'green';
-                      }).length}
-                    </h3>
-                    <TrendingUp className="text-green-500 mb-1" size={24} />
-                  </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl border-l-4 border-amber-500 shadow-sm group hover:shadow-md transition-all">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">En Observación</p>
-                  <div className="flex items-end justify-between">
-                    <h3 className="text-4xl font-black text-slate-800 tracking-tighter">
-                      {data.filter(k => {
-                        const { status } = getKpiStatus(k, filters.year, filters.month, filters.week);
-                        return status === 'yellow';
-                      }).length}
-                    </h3>
-                    <AlertTriangle className="text-amber-500 mb-1" size={24} />
-                  </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl border-l-4 border-red-500 shadow-sm group hover:shadow-md transition-all">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Pérdidas Críticas</p>
-                  <div className="flex items-end justify-between">
-                    <h3 className="text-4xl font-black text-slate-800 tracking-tighter">
-                      {data.filter(k => {
-                        const { status } = getKpiStatus(k, filters.year, filters.month, filters.week);
-                        return status === 'red';
-                      }).length}
-                    </h3>
-                    <TrendingDown className="text-red-500 mb-1" size={24} />
-                  </div>
-                </div>
-                {/* --- Card Desempeño Total con Sparkline y Delta --- */}
-                <div className="bg-blue-600 p-6 rounded-2xl text-white shadow-xl shadow-blue-100 flex flex-col justify-between relative overflow-hidden">
-                  <p className="text-[10px] font-black text-blue-200 uppercase tracking-[0.2em] mb-1">Desempeño Total</p>
-                  {/* Simulación de datos de tendencia semanal */}
-                  {(() => {
-                    // Simular OEE de los últimos 7 días (en un caso real, esto vendría de un endpoint)
-                    const today = new Date();
-                    const trendData = Array.from({ length: 7 }).map((_, i) => {
-                      const d = new Date(today);
-                      d.setDate(today.getDate() - (6 - i));
-                      // Simular OEE: usar el porcentaje de KPIs en verde ese día (o random si no hay histórico)
-                      // Aquí solo para demo, usar el valor actual +/- una pequeña variación
-                      const base = data.length > 0 ? Math.round((data.filter(k => {
-                        const { status } = getKpiStatus(k, filters.year, filters.month, (parseInt(filters.week) - (6 - i)).toString().padStart(2, '0'));
-                        return status === 'green';
-                      }).length / data.length) * 100) : 0;
-                      // Simulación: si no hay datos, variar aleatoriamente
-                      return {
-                        fecha: d.toISOString().slice(0, 10),
-                        oee: base + (Math.random() * 4 - 2) // +/-2% aleatorio
-                      };
-                    });
-                    const oeeActual = trendData[6]?.oee ?? 0;
-                    const oeeAnterior = trendData[5]?.oee ?? 0;
-                    const delta = oeeActual - oeeAnterior;
-                    const meta = 85;
-                    return (
-                      <>
-                        <div className="flex flex-col items-start mb-2">
-                          <div className="flex items-baseline gap-2">
-                            <div className="relative flex flex-col items-start">
-                              <h3 className="text-4xl font-black tracking-tighter leading-none" style={{ minWidth: '90px', width: 'fit-content', textAlign: 'left' }}>{Math.round(oeeActual)}%</h3>
-                              {/* Sparkline del mismo ancho que el número */}
-                              <div style={{ width: '90px', maxWidth: '100%' }} className="mt-1 h-6 flex items-center justify-start">
-                                <ResponsiveContainer width="100%" height="100%">
-                                  <LineChart data={trendData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                                    <ReferenceLine y={meta} stroke="#fbbf24" strokeDasharray="4 2" label={{ value: 'Meta', position: 'right', fill: '#fbbf24', fontSize: 10, fontWeight: 700 }} />
-                                    <Line type="monotone" dataKey="oee" stroke="#fff" strokeWidth={2.2} dot={false} isAnimationActive={true} />
-                                  </LineChart>
-                                </ResponsiveContainer>
-                              </div>
-                            </div>
-                            {/* Indicador Delta */}
-                            <span className={
-                              "flex items-center text-xs font-bold ml-2 " +
-                              (delta > 0 ? 'text-green-300' : delta < 0 ? 'text-red-300' : 'text-blue-200')
-                            }>
-                              {delta > 0 && <TrendingUp size={16} className="mr-1" />}
-                              {delta < 0 && <TrendingDown size={16} className="mr-1" />}
-                              {delta === 0 && <span className="mr-1">→</span>}
-                              {delta > 0 ? `+${delta.toFixed(1)}%` : delta < 0 ? `${delta.toFixed(1)}%` : '0.0%'}
-                            </span>
-                          </div>
-                          <Zap size={24} className="text-yellow-300 ml-2" />
-                        </div>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
+              Reintentar Conexión
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Navegación y Perfiles Dinámicos */}
+            <Navbar
+              areas={areas}
+              view={view}
+              setView={setView}
+              userEmail={user.email}
+              onRolesResolved={setRole}
+            />
 
-              {/* Global Performance Chart Section */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden"
-              >
-                <div className="flex justify-between items-center mb-8">
-                  <div>
-                    <h3 className="text-xl font-black text-slate-800 tracking-tighter uppercase">Desempeño de Pilares por Área</h3>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Estado actual de cumplimiento de metas por pilar WCM</p>
-                  </div>
-                </div>
-                <div className="h-80 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={globalChartData}
-                      layout="vertical"
-                      margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-                      <XAxis type="number" domain={[0, 100]} hide />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        axisLine={false}
-                        tickLine={false}
-                        width={140}
-                        tick={{ fontSize: 11, fontWeight: 900, fill: '#64748b', textAnchor: 'end' }}
-                      />
-                      <Tooltip
-                        cursor={{ fill: '#f8fafc' }}
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div className="bg-slate-900 text-white p-3 rounded-xl shadow-2xl border border-slate-700">
-                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{payload[0].payload.name}</p>
-                                <p className="text-sm font-black mt-1">{payload[0].value}% OK</p>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Bar dataKey="score" radius={[0, 8, 8, 0]} barSize={24}>
-                        {globalChartData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={entry.score >= 98 ? '#22c55e' : (entry.score >= 90 ? '#f59e0b' : '#ef4444')}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </motion.div>
-
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {areas.map((area) => (
-                  <motion.div
-                    key={area.id}
-                    whileHover={{ y: -4 }}
-                    onClick={() => setView(area.id)}
-                    className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-blue-400 cursor-pointer transition-all group relative overflow-hidden"
-                  >
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="p-2.5 bg-slate-50 rounded-xl group-hover:bg-blue-50 transition-colors">
-                        <IconWrapper name={area.icon} size={20} className="text-slate-700 group-hover:text-blue-600" />
+            <AnimatePresence mode="wait">
+              {view === 'overview' ? (
+                <motion.div
+                  key="overview"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  className="space-y-8"
+                >
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-white p-6 rounded-2xl border-l-4 border-green-500 shadow-sm group hover:shadow-md transition-all">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">KPIs en Blanco</p>
+                      <div className="flex items-end justify-between">
+                        <h3 className="text-4xl font-black text-slate-800 tracking-tighter">
+                          {data.filter(k => {
+                            const { status } = getKpiStatus(k, filters.year, filters.month, filters.week);
+                            return status === 'green';
+                          }).length}
+                        </h3>
+                        <TrendingUp className="text-green-500 mb-1" size={24} />
                       </div>
-                      <span className={cn(
-                        "text-[11px] font-black px-2.5 py-1 rounded-lg",
-                        stats[area.id] > 80 ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'
-                      )}>
-                        {stats[area.id]}% OK
-                      </span>
                     </div>
-                    <h3 className="font-black text-slate-800 mb-3 uppercase tracking-tighter text-sm">{area.name}</h3>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase mb-1">
-                        <span>Pilar {area.id.toUpperCase()}</span>
-                        <span>Meta 100%</span>
+                    <div className="bg-white p-6 rounded-2xl border-l-4 border-amber-500 shadow-sm group hover:shadow-md transition-all">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">En Observación</p>
+                      <div className="flex items-end justify-between">
+                        <h3 className="text-4xl font-black text-slate-800 tracking-tighter">
+                          {data.filter(k => {
+                            const { status } = getKpiStatus(k, filters.year, filters.month, filters.week);
+                            return status === 'yellow';
+                          }).length}
+                        </h3>
+                        <AlertTriangle className="text-amber-500 mb-1" size={24} />
                       </div>
-                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${stats[area.id]}%` }}
-                          transition={{ duration: 1, ease: "easeOut" }}
-                          className={cn(
-                            "h-full rounded-full",
-                            stats[area.id] > 80 ? 'bg-green-500' : 'bg-amber-500'
-                          )}
-                        />
+                    </div>
+                    <div className="bg-white p-6 rounded-2xl border-l-4 border-red-500 shadow-sm group hover:shadow-md transition-all">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Pérdidas Críticas</p>
+                      <div className="flex items-end justify-between">
+                        <h3 className="text-4xl font-black text-slate-800 tracking-tighter">
+                          {data.filter(k => {
+                            const { status } = getKpiStatus(k, filters.year, filters.month, filters.week);
+                            return status === 'red';
+                          }).length}
+                        </h3>
+                        <TrendingDown className="text-red-500 mb-1" size={24} />
                       </div>
+                    </div>
+                    {/* --- Card Desempeño Total con Sparkline y Delta --- */}
+                    <div className="bg-blue-600 p-6 rounded-2xl text-white shadow-xl shadow-blue-100 flex flex-col justify-between relative overflow-hidden">
+                      <p className="text-[10px] font-black text-blue-200 uppercase tracking-[0.2em] mb-1">Desempeño Total</p>
+                      {/* Simulación de datos de tendencia semanal */}
+                      {(() => {
+                        // Simular OEE de los últimos 7 días (en un caso real, esto vendría de un endpoint)
+                        const today = new Date();
+                        const trendData = Array.from({ length: 7 }).map((_, i) => {
+                          const d = new Date(today);
+                          d.setDate(today.getDate() - (6 - i));
+                          // Simular OEE: usar el porcentaje de KPIs en verde ese día (o random si no hay histórico)
+                          // Aquí solo para demo, usar el valor actual +/- una pequeña variación
+                          const base = data.length > 0 ? Math.round((data.filter(k => {
+                            const { status } = getKpiStatus(k, filters.year, filters.month, (parseInt(filters.week) - (6 - i)).toString().padStart(2, '0'));
+                            return status === 'green';
+                          }).length / data.length) * 100) : 0;
+                          // Simulación: si no hay datos, variar aleatoriamente
+                          return {
+                            fecha: d.toISOString().slice(0, 10),
+                            oee: base + (Math.random() * 4 - 2) // +/-2% aleatorio
+                          };
+                        });
+                        const oeeActual = trendData[6]?.oee ?? 0;
+                        const oeeAnterior = trendData[5]?.oee ?? 0;
+                        const delta = oeeActual - oeeAnterior;
+                        const meta = 85;
+                        return (
+                          <>
+                            <div className="flex flex-col items-start mb-2">
+                              <div className="flex items-baseline gap-2">
+                                <div className="relative flex flex-col items-start">
+                                  <h3 className="text-4xl font-black tracking-tighter leading-none" style={{ minWidth: '90px', width: 'fit-content', textAlign: 'left' }}>{Math.round(oeeActual)}%</h3>
+                                  {/* Sparkline del mismo ancho que el número */}
+                                  <div style={{ width: '90px', maxWidth: '100%' }} className="mt-1 h-6 flex items-center justify-start">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                      <LineChart data={trendData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                                        <ReferenceLine y={meta} stroke="#fbbf24" strokeDasharray="4 2" label={{ value: 'Meta', position: 'right', fill: '#fbbf24', fontSize: 10, fontWeight: 700 }} />
+                                        <Line type="monotone" dataKey="oee" stroke="#fff" strokeWidth={2.2} dot={false} isAnimationActive={true} />
+                                      </LineChart>
+                                    </ResponsiveContainer>
+                                  </div>
+                                </div>
+                                {/* Indicador Delta */}
+                                <span className={
+                                  "flex items-center text-xs font-bold ml-2 " +
+                                  (delta > 0 ? 'text-green-300' : delta < 0 ? 'text-red-300' : 'text-blue-200')
+                                }>
+                                  {delta > 0 && <TrendingUp size={16} className="mr-1" />}
+                                  {delta < 0 && <TrendingDown size={16} className="mr-1" />}
+                                  {delta === 0 && <span className="mr-1">→</span>}
+                                  {delta > 0 ? `+${delta.toFixed(1)}%` : delta < 0 ? `${delta.toFixed(1)}%` : '0.0%'}
+                                </span>
+                              </div>
+                              <Zap size={24} className="text-yellow-300 ml-2" />
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Global Performance Chart Section */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden"
+                  >
+                    <div className="flex justify-between items-center mb-8">
+                      <div>
+                        <h3 className="text-xl font-black text-slate-800 tracking-tighter uppercase">Desempeño de Pilares por Área</h3>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Estado actual de cumplimiento de metas por pilar WCM</p>
+                      </div>
+                    </div>
+                    <div className="h-80 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={globalChartData}
+                          layout="vertical"
+                          margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+                          <XAxis type="number" domain={[0, 100]} hide />
+                          <YAxis
+                            dataKey="name"
+                            type="category"
+                            axisLine={false}
+                            tickLine={false}
+                            width={140}
+                            tick={{ fontSize: 11, fontWeight: 900, fill: '#64748b', textAnchor: 'end' }}
+                          />
+                          <Tooltip
+                            cursor={{ fill: '#f8fafc' }}
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-slate-900 text-white p-3 rounded-xl shadow-2xl border border-slate-700">
+                                    <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{payload[0].payload.name}</p>
+                                    <p className="text-sm font-black mt-1">{payload[0].value}% OK</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar dataKey="score" radius={[0, 8, 8, 0]} barSize={24}>
+                            {globalChartData.map((entry, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={entry.score >= 98 ? '#22c55e' : (entry.score >= 90 ? '#f59e0b' : '#ef4444')}
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
                     </div>
                   </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          ) : view === 'master' ? (
-            <motion.div
-              key="master"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              className="space-y-8 animate-in fade-in duration-500"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Panel de Datos Maestros</h2>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Administración de Estructura WCM</p>
-                </div>
-                <button
-                  onClick={() => setIsAddingArea(true)}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-all"
-                >
-                  <Plus size={18} /> Nueva Área
-                </button>
-              </div>
 
-              <div className="grid grid-cols-1 gap-6">
-                {areas.map(area => (
-                  <div key={area.id} className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm overflow-hidden relative">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="p-3 bg-slate-100 rounded-2xl">
-                          <IconWrapper name={area.icon} size={28} className="text-slate-700" />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-black text-slate-800 tracking-tighter uppercase">{area.name}</h3>
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">ID: {area.id}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAddingKpiToArea(area.id);
-                        }}
-                        className="relative z-50 bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm"
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {areas.map((area) => (
+                      <motion.div
+                        key={area.id}
+                        whileHover={{ y: -4 }}
+                        onClick={() => setView(area.id)}
+                        className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-blue-400 cursor-pointer transition-all group relative overflow-hidden"
                       >
-                        <Plus size={16} className="inline mr-1" /> KPI
+                        <div className="flex justify-between items-center mb-4">
+                          <div className="p-2.5 bg-slate-50 rounded-xl group-hover:bg-blue-50 transition-colors">
+                            <IconWrapper name={area.icon} size={20} className="text-slate-700 group-hover:text-blue-600" />
+                          </div>
+                          <span className={cn(
+                            "text-[11px] font-black px-2.5 py-1 rounded-lg",
+                            stats[area.id] > 80 ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'
+                          )}>
+                            {stats[area.id]}% OK
+                          </span>
+                        </div>
+                        <h3 className="font-black text-slate-800 mb-3 uppercase tracking-tighter text-sm">{area.name}</h3>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[9px] font-black text-slate-400 uppercase mb-1">
+                            <span>Pilar {area.id.toUpperCase()}</span>
+                            <span>Meta 100%</span>
+                          </div>
+                          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${stats[area.id]}%` }}
+                              transition={{ duration: 1, ease: "easeOut" }}
+                              className={cn(
+                                "h-full rounded-full",
+                                stats[area.id] > 80 ? 'bg-green-500' : 'bg-amber-500'
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              ) : view === 'master' ? (
+                <AreasListManager
+                  key="master"
+                  areas={areas}
+                  data={data}
+                  role={role}
+                  onAddKpi={(areaId) => setAddingKpiToArea(areaId)}
+                  onEditKpi={(kpi) => setEditingKpi(kpi)}
+                  onDeleteKpi={(id) => handleDeleteKpi(id)}
+                  onAreasUpdated={fetchAreas}
+                />
+              ) : (
+                <motion.div
+                  key="detail"
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  className="space-y-8"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setView('overview')}
+                        className="p-3 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+                      >
+                        <ChevronLeft size={24} />
                       </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {processedData.filter(k => k.areaId === area.id).map(kpi => (
-                        <div key={kpi.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl group hover:border-blue-200 transition-all">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-8 h-8 flex items-center justify-center rounded-lg text-white font-black text-xs"
-                              style={{ backgroundColor: SQCDP_CATEGORIES[kpi.cat].color }}
-                            >
-                              {kpi.cat}
-                            </div>
-                            <div>
-                              <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{kpi.label}</p>
-                              <p className="text-[9px] font-bold text-slate-400 uppercase">Meta: {kpi.target} {kpi.unit}</p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => setEditingKpi(kpi)} className="p-2 text-slate-500 hover:text-blue-600 transition-colors"><Edit3 size={16} /></button>
-                            <button onClick={() => handleDeleteKpi(kpi.id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="detail"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              className="space-y-8"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={() => setView('overview')}
-                    className="p-3 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
-                  >
-                    <ChevronLeft size={24} />
-                  </button>
-                  <div>
-                    <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter flex items-center gap-3">
-                      {currentArea && <IconWrapper name={currentArea.icon} size={32} className="text-blue-600" />}
-                      Pilar {currentArea?.name}
-                    </h2>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Análisis Multidimensional SQCDP</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                {(['S', 'Q', 'C', 'D', 'P'] as SqcdpCat[]).map(catLetter => {
-                  const catKpis = data.filter(k => k.areaId === view && k.cat === catLetter);
-                  const config = SQCDP_CATEGORIES[catLetter];
-                  return (
-                    <div key={catLetter} className="flex flex-col gap-4">
-                      <div className="group relative">
-                        <div className="absolute inset-0 bg-white shadow-sm border border-slate-200 rounded-2xl translate-y-1 translate-x-1" />
-                        <div className="relative flex flex-col gap-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5">
-                          <div className="flex items-center justify-between">
-                            <div
-                              className="w-8 h-8 flex items-center justify-center rounded-lg text-white font-black text-sm shadow-md"
-                              style={{ backgroundColor: config.color }}
-                            >
-                              {catLetter}
-                            </div>
-                            <span className="text-[9px] font-black text-slate-400 uppercase">{catKpis.length} KPIs</span>
-                          </div>
-                          <div className="mt-2">
-                            <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest leading-none">{config.label}</span>
-                            <p className="text-[9px] text-slate-400 mt-0.5">{config.description}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        {catKpis.length > 0 ? (
-                          catKpis.map(k => {
-                            const { value, comment } = getKpiStatus(k, filters.year, filters.month, filters.week);
-                            return (
-                              <KpiCard
-                                key={k.id}
-                                kpi={k}
-                                currentValue={value}
-                                currentComment={comment}
-                                role={role}
-                                onEdit={(kpi) => setEditingKpi(kpi)}
-                                onViewDetails={(kpi) => setViewingKpiDetails(kpi)}
-                              />
-                            );
-                          })
-                        ) : (
-                          <div className="h-24 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center grayscale opacity-45 p-4 transition-all hover:opacity-60">
-                            <Info size={18} className="text-slate-500 mb-1" />
-                            <span className="text-[9px] font-black text-slate-500 uppercase text-center">Sin indicadores</span>
-                          </div>
-                        )}
+                      <div>
+                        <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter flex items-center gap-3">
+                          {currentArea && <IconWrapper name={currentArea.icon} size={32} className="text-blue-600" />}
+                          Pilar {currentArea?.name}
+                        </h2>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ltidimensional SQCDP</p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                    {(['S', 'Q', 'C', 'D', 'P'] as SqcdpCat[]).map(catLetter => {
+                      const catKpis = data.filter(k => k.areaId === view && k.cat === catLetter);
+                      const config = SQCDP_CATEGORIES[catLetter];
+                      return (
+                        <div key={catLetter} className="flex flex-col gap-4">
+                          <div className="group relative">
+                            <div className="absolute inset-0 bg-white shadow-sm border border-slate-200 rounded-2xl translate-y-1 translate-x-1" />
+                            <div className="relative flex flex-col gap-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5">
+                              <div className="flex items-center justify-between">
+                                <div
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg text-white font-black text-sm shadow-md"
+                                  style={{ backgroundColor: config.color }}
+                                >
+                                  {catLetter}
+                                </div>
+                                <span className="text-[9px] font-black text-slate-400 uppercase">{catKpis.length} KPIs</span>
+                              </div>
+                              <div className="mt-2">
+                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest leading-none">{config.label}</span>
+                                <p className="text-[9px] text-slate-400 mt-0.5">{config.description}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            {catKpis.length > 0 ? (
+                              catKpis.map(k => {
+                                const { value, comment } = getKpiStatus(k, filters.year, filters.month, filters.week);
+                                return (
+                                  <KpiCard
+                                    key={k.id}
+                                    kpi={k}
+                                    currentValue={value}
+                                    currentComment={comment}
+                                    role={role}
+                                    onEdit={(kpi) => setEditingKpi(kpi)}
+                                    onViewDetails={(kpi) => setViewingKpiDetails(kpi)}
+                                  />
+                                );
+                              })
+                            ) : (
+                              <div className="h-24 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center grayscale opacity-45 p-4 transition-all hover:opacity-60">
+                                <Info size={18} className="text-slate-500 mb-1" />
+                                <span className="text-[9px] font-black text-slate-500 uppercase text-center">Sin indicadores</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        )}
       </main>
 
       <AnimatePresence>
@@ -1068,40 +1054,7 @@ export default function App() {
 
       {/* Modal Edición Admin */}
       <AnimatePresence>
-        {isAddingArea && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsAddingArea(false)}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden border border-slate-200"
-            >
-              <div className="bg-slate-50 px-8 py-8 border-b border-slate-100 flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-black text-slate-800 tracking-tight">Nueva Área / Pilar</h3>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Definir nueva división WCM</p>
-                </div>
-                <button onClick={() => setIsAddingArea(false)} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-all"><X size={20} /></button>
-              </div>
-              <form onSubmit={handleAddArea} className="p-8 space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Nombre del Área</label>
-                  <input name="name" type="text" autoFocus className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" required />
-                </div>
-                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-100 transition-all active:scale-[0.98] uppercase text-[11px] tracking-widest">
-                  Crear Área
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
+
 
         {addingKpiToArea && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
