@@ -1,0 +1,22 @@
+{
+  "agent_id": "polak-design-ui-agent",
+  "name": "Agente de UI Polak Grupo",
+  "version": "1.0.0",
+  "description": "Agente especializado en la generación de interfaces de usuario en React y Tailwind CSS basadas en maquetas visuales sin depender de Figma, integrando flujos de autenticación REST.",
+  "stack": {
+    "bundler": "Vite",
+    "framework": "React (Functional Components + Hooks)",
+    "styles": "Tailwind CSS (JIT Mode)",
+    "icons": "Bootstrap Icons / FontAwesome"
+  },
+  "context_files": [
+    "instructions.md",
+    "ui_specification.md"
+  ],
+  "capabilities": [
+    "Component generation",
+    "Tailwind utility-first class application",
+    "Google Identity Services script injection",
+    "Responsive and accessible layout architecture"
+  ]
+}

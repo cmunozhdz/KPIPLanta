@@ -31,7 +31,9 @@ import {
   Plus,
   Trash2,
   Database,
-  Target
+  Target,
+  LogOut,
+  User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -50,6 +52,8 @@ import {
 import { cn } from './lib/utils';
 import { Area, Kpi, UserRole, SqcdpCat, Status, KpiHistory } from './types';
 import { AREAS, SQCDP_CATEGORIES, INITIAL_DATA, MONTHS, YEARS, WEEKS } from './constants/data';
+import LoginScreen from './LoginScreen';
+import { Navbar } from './components/Navbar';
 
 // --- Utility Components ---
 
@@ -164,7 +168,26 @@ export default function App() {
   const [areas, setAreas] = useState<Area[]>(Object.values(AREAS));
   const [data, setData] = useState<Kpi[]>(INITIAL_DATA);
   const [view, setView] = useState<string>('overview'); // 'overview' | 'master' | ID del área
-  const [role, setRole] = useState<UserRole>('viewer');
+  const [user, setUser] = useState<{ email: string; role: UserRole } | null>(() => {
+    try {
+      const saved = localStorage.getItem('kpi_user_session');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [role, setRole] = useState<UserRole>(user ? user.role : 'viewer');
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('kpi_user_session', JSON.stringify(user));
+      setRole(user.role);
+    } else {
+      localStorage.removeItem('kpi_user_session');
+      setRole('viewer');
+    }
+  }, [user]);
+
   const [editingKpi, setEditingKpi] = useState<Kpi | null>(null);
   const [viewingKpiDetails, setViewingKpiDetails] = useState<Kpi | null>(null);
   const [toast, setToast] = useState<{ message: string; type?: 'error' | 'info' } | null>(null);
@@ -557,6 +580,10 @@ export default function App() {
     );
   };
 
+  if (!user) {
+    return <LoginScreen onLoginSuccess={(loginData) => setUser(loginData.user)} />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans selection:bg-blue-100 selection:text-blue-900">
 
@@ -574,37 +601,6 @@ export default function App() {
           </div>
 
           <div className="flex flex-wrap gap-3 items-center w-full xl:w-auto">
-            {/* Selector de Rol */}
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-              <button
-                onClick={() => setRole('viewer')}
-                className={cn(
-                  "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
-                  role === 'viewer' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                )}
-              >
-                Visor
-              </button>
-              <button
-                onClick={() => setRole('operator')}
-                className={cn(
-                  "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
-                  role === 'operator' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                )}
-              >
-                Op
-              </button>
-              <button
-                onClick={() => setRole('admin')}
-                className={cn(
-                  "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all",
-                  role === 'admin' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                )}
-              >
-                Admin
-              </button>
-            </div>
-
             {/* Filtros Temporales */}
             <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
               <div className="flex items-center gap-2 pr-3 border-r border-slate-200">
@@ -636,59 +632,42 @@ export default function App() {
               </div>
             </div>
 
-            <button className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95 ml-auto md:ml-0">
+            <button className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95">
               <Download size={16} /> Exportar WCM
             </button>
+
+            {/* Información de Sesión de Usuario */}
+            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-2 px-3 ml-auto md:ml-0">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                {user.email.charAt(0)}
+              </div>
+              <div className="hidden sm:block text-left">
+                <p className="text-[10px] font-black text-slate-800 leading-none mb-0.5">{user.email}</p>
+                <span className="inline-block px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[8px] font-black uppercase tracking-wider">
+                  {role === 'admin' ? 'Administrador' : role === 'operator' ? 'Operador' : 'Visor'}
+                </span>
+              </div>
+              <button
+                onClick={() => setUser(null)}
+                title="Cerrar Sesión"
+                className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={16} />
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto">
-        {/* Navegación por Áreas */}
-        <div className="relative mb-8 group">
-          <nav className="flex overflow-x-auto gap-2 no-scrollbar pb-2 mask-linear">
-            <button
-              onClick={() => setView('overview')}
-              className={cn(
-                "flex-shrink-0 px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border",
-                view === 'overview'
-                  ? 'bg-slate-800 text-white border-slate-800 shadow-md translate-y-[-2px]'
-                  : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-              )}
-            >
-              Panorama Global
-            </button>
-            {areas.map((area) => (
-              <button
-                key={area.id}
-                onClick={() => setView(area.id)}
-                className={cn(
-                  "flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border",
-                  view === area.id
-                    ? 'bg-slate-800 text-white border-slate-800 shadow-md translate-y-[-2px]'
-                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-                )}
-              >
-                <IconWrapper name={area.icon} size={16} />
-                {area.name}
-              </button>
-            ))}
-            {role === 'admin' && (
-              <button
-                onClick={() => setView('master')}
-                className={cn(
-                  "flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border",
-                  view === 'master'
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-md translate-y-[-2px]'
-                    : 'bg-white text-blue-500 border-blue-200 hover:border-blue-300'
-                )}
-              >
-                <Database size={16} />
-                Datos Maestros
-              </button>
-            )}
-          </nav>
-        </div>
+        {/* Navegación y Perfiles Dinámicos */}
+        <Navbar 
+          areas={areas}
+          view={view}
+          setView={setView}
+          userEmail={user.email}
+          onRolesResolved={setRole}
+        />
 
         <AnimatePresence mode="wait">
           {view === 'overview' ? (
