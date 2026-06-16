@@ -56,6 +56,9 @@ import LoginScreen from './LoginScreen';
 import { Navbar } from './components/Navbar';
 import { AreasListManager } from './components/AreasListManager';
 import { areaService } from './services/areaService';
+import { CatalogosKPIService } from './services/CatalogosKPI';
+import { KpiCard } from './components/KpiCard';
+import { SqcdpPillars } from './components/SqcdpPillars';
 
 // --- Utility Components ---
 
@@ -81,88 +84,7 @@ const IconWrapper = ({ name, size = 20, className }: { name: string, size?: numb
   return <Icon size={size} className={cn("text-slate-700", className)} />;
 };
 
-// --- KPI Card Component ---
 
-interface KpiCardProps {
-  kpi: Kpi;
-  currentValue: number;
-  currentComment: string;
-  role: UserRole;
-  onEdit: (kpi: Kpi) => void;
-  onViewDetails: (kpi: Kpi) => void;
-  onToggleVisibility?: (kpi: Kpi) => void;
-  key?: React.Key;
-}
-
-const KpiCard = ({ kpi, currentValue, currentComment, role, onEdit, onViewDetails, onToggleVisibility }: KpiCardProps) => {
-  const calculateStatus = (k: Kpi, val: number): Status => {
-    const ratio = k.dir === 1 ? val / k.target : k.target / val;
-    if (ratio >= 0.98) return 'green';
-    if (ratio >= 0.90) return 'yellow';
-    return 'red';
-  };
-
-  const status = calculateStatus(kpi, currentValue);
-  const categoryColor = SQCDP_CATEGORIES[kpi.cat]?.color || '#60a5fa';
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all h-[280px] min-h-[280px] flex flex-col justify-between"
-    >
-      <div className="absolute left-0 top-4 bottom-4 w-3 rounded-r-full" style={{ backgroundColor: categoryColor }}></div>
-      <div className="p-5 pl-8 flex-1 flex flex-col justify-between">
-        <div className="flex justify-between items-start mb-3 gap-2">
-          <div className="max-w-[80%]">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-white font-black text-xs"
-                style={{ backgroundColor: SQCDP_CATEGORIES[kpi.cat]?.color }}
-              >
-                {kpi.cat}
-              </div>
-              <div>
-                <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] leading-snug">{kpi.label}</h4>
-                <p className="text-[9px] font-black text-slate-400 uppercase">{SQCDP_CATEGORIES[kpi.cat]?.label}</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-slate-500">
-            <button
-              onClick={() => onViewDetails(kpi)}
-              className="text-slate-500 hover:text-slate-700 transition-colors p-1"
-            >
-              <History size={14} />
-            </button>
-            {role !== 'viewer' && (
-              <button
-                onClick={() => onEdit(kpi)}
-                className="text-slate-500 hover:text-blue-600 transition-colors p-1"
-              >
-                <Edit3 size={14} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-3">
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-black text-slate-900 tracking-tight">{currentValue ?? '-'}</span>
-            <span className="text-xs uppercase font-black text-slate-400 tracking-[0.35em]">{kpi.unit}</span>
-          </div>
-          <p className="mt-2 text-[11px] text-slate-500 font-bold">{currentComment || 'Sin registro'}</p>
-        </div>
-
-        <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Meta: {kpi.target}</span>
-          <StatusBadge status={status} />
-        </div>
-      </div>
-    </motion.div>
-  );
-};
 
 // --- Main App Component ---
 
@@ -205,7 +127,38 @@ export default function App() {
           color: a.AreaColor || 'slate'
         }));
         setAreas(fetchedAreas);
-        setData(INITIAL_DATA); // Usar datos locales temporalmente para KPIs mientras no haya API de KPIs completa
+        
+        // Cargar todos los KPIs dinámicamente desde la API para cada una de las áreas
+        const kpisPromises = fetchedAreas.map(async (area) => {
+          try {
+            const rawKpis = await CatalogosKPIService.getAreaKPIs(area.id);
+            console.log(`[KPIs] Área ${area.id}:`, rawKpis);
+            // Asegurar que rawKpis es un array antes de mapear
+            if (!Array.isArray(rawKpis)) {
+              console.warn(`[KPIs] Área ${area.id}: respuesta no es un array`, rawKpis);
+              return [];
+            }
+            // Mapeamos el formato de la API al formato Kpi interno utilizado por el Dashboard
+            return rawKpis.map((rk: any) => ({
+              id: String(rk.ID),
+              areaId: rk.AreaId || area.id,
+              cat: (rk.Categoria as SqcdpCat) || 'S',
+              label: rk.Descripcion || 'Sin descripción',
+              target: parseFloat(rk.Meta) || 0,
+              dir: rk.Direccion === 2 ? -1 : 1,
+              unit: rk.Unidaddemedida || '',
+              is_visible_top: rk.Activo ?? true,
+              history: [] // La API de histórico no está especificada en esta historia
+            }));
+          } catch (err) {
+            console.error(`Error cargando KPIs para área ${area.id}`, err);
+            return [];
+          }
+        });
+        
+        const allKpisLists = await Promise.all(kpisPromises);
+        const allKpis = allKpisLists.flat();
+        setData(allKpis);
       } else {
         throw new Error('Formato de respuesta inválido');
       }
@@ -453,7 +406,7 @@ export default function App() {
               <div className="flex items-center gap-3 mb-2">
                 <div
                   className="w-10 h-10 flex items-center justify-center rounded-xl text-white font-black text-xl shadow-lg"
-                  style={{ backgroundColor: SQCDP_CATEGORIES[kpi.cat].color }}
+                  style={{ backgroundColor: SQCDP_CATEGORIES[kpi.cat]?.color || '#60a5fa' }}
                 >
                   {kpi.cat}
                 </div>
@@ -922,11 +875,7 @@ export default function App() {
                 <AreasListManager
                   key="master"
                   areas={areas}
-                  data={data}
                   role={role}
-                  onAddKpi={(areaId) => setAddingKpiToArea(areaId)}
-                  onEditKpi={(kpi) => setEditingKpi(kpi)}
-                  onDeleteKpi={(id) => handleDeleteKpi(id)}
                   onAreasUpdated={fetchAreas}
                 />
               ) : (
@@ -955,58 +904,14 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                    {(['S', 'Q', 'C', 'D', 'P'] as SqcdpCat[]).map(catLetter => {
-                      const catKpis = data.filter(k => k.areaId === view && k.cat === catLetter);
-                      const config = SQCDP_CATEGORIES[catLetter];
-                      return (
-                        <div key={catLetter} className="flex flex-col gap-4">
-                          <div className="group relative">
-                            <div className="absolute inset-0 bg-white shadow-sm border border-slate-200 rounded-2xl translate-y-1 translate-x-1" />
-                            <div className="relative flex flex-col gap-1 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5">
-                              <div className="flex items-center justify-between">
-                                <div
-                                  className="w-8 h-8 flex items-center justify-center rounded-lg text-white font-black text-sm shadow-md"
-                                  style={{ backgroundColor: config.color }}
-                                >
-                                  {catLetter}
-                                </div>
-                                <span className="text-[9px] font-black text-slate-400 uppercase">{catKpis.length} KPIs</span>
-                              </div>
-                              <div className="mt-2">
-                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest leading-none">{config.label}</span>
-                                <p className="text-[9px] text-slate-400 mt-0.5">{config.description}</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            {catKpis.length > 0 ? (
-                              catKpis.map(k => {
-                                const { value, comment } = getKpiStatus(k, filters.year, filters.month, filters.week);
-                                return (
-                                  <KpiCard
-                                    key={k.id}
-                                    kpi={k}
-                                    currentValue={value}
-                                    currentComment={comment}
-                                    role={role}
-                                    onEdit={(kpi) => setEditingKpi(kpi)}
-                                    onViewDetails={(kpi) => setViewingKpiDetails(kpi)}
-                                  />
-                                );
-                              })
-                            ) : (
-                              <div className="h-24 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center grayscale opacity-45 p-4 transition-all hover:opacity-60">
-                                <Info size={18} className="text-slate-500 mb-1" />
-                                <span className="text-[9px] font-black text-slate-500 uppercase text-center">Sin indicadores</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <SqcdpPillars
+                    data={data}
+                    view={view}
+                    filters={filters}
+                    role={role}
+                    onEdit={(kpi) => setEditingKpi(kpi)}
+                    onViewDetails={(kpi) => setViewingKpiDetails(kpi)}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1143,7 +1048,7 @@ export default function App() {
                   <div className="flex items-center gap-2 mb-1">
                     <div
                       className="w-6 h-6 flex items-center justify-center rounded text-white font-black text-[10px]"
-                      style={{ backgroundColor: SQCDP_CATEGORIES[editingKpi.cat].color }}
+                      style={{ backgroundColor: SQCDP_CATEGORIES[editingKpi.cat]?.color || '#60a5fa' }}
                     >
                       {editingKpi.cat}
                     </div>

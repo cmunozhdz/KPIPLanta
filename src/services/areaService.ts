@@ -17,7 +17,10 @@ export const areaService = {
 
   getAreaById: async (areaId: string) => {
     const apiUrl = getApiUrl();
-    const response = await fetch(`${apiUrl}/Item/${areaId}`);
+    const timestamp = new Date().getTime();
+    const response = await fetch(`${apiUrl}/Item/${areaId}?_=${timestamp}`, {
+      cache: 'no-store'
+    });
     
     if (!response.ok) {
       throw new Error('Error al obtener el área');

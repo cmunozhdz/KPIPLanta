@@ -1,39 +1,88 @@
-import React, { useState } from 'react';
-import { Area, Kpi, SqcdpCat } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Area, Kpi } from '../types';
 import { SQCDP_CATEGORIES } from '../constants/data';
-import { Edit3, Trash2, Plus, Factory, ChevronDown, ChevronUp } from 'lucide-react';
+import { Edit3, Trash2, Plus, Factory, ChevronDown, ChevronUp, AlertTriangle, X, Loader2 } from 'lucide-react';
 import { AreaManager } from './AreaManager';
+import { KPIManager } from './KPIManager';
+import { CatalogosKPIService } from '../services/CatalogosKPI';
 import { cn } from '../lib/utils';
 
 interface AreasListManagerProps {
   areas: Area[];
-  data: Kpi[];
   role: string;
-  onAddKpi: (areaId: string) => void;
-  onEditKpi: (kpi: Kpi) => void;
-  onDeleteKpi: (id: string) => void;
   onAreasUpdated: () => void;
 }
 
 export const AreasListManager: React.FC<AreasListManagerProps> = ({
   areas,
-  data,
   role,
-  onAddKpi,
-  onEditKpi,
-  onDeleteKpi,
   onAreasUpdated
 }) => {
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
   const [isCreatingArea, setIsCreatingArea] = useState(false);
   const [expandedAreaId, setExpandedAreaId] = useState<string | null>(null);
+  
+  // KPIs locales cargados dinámicamente por área expandida
+  const [areaKpis, setAreaKpis] = useState<Record<string, any[]>>({});
+  const [loadingKpis, setLoadingKpis] = useState<Record<string, boolean>>({});
 
-  const toggleArea = (id: string) => {
-    setExpandedAreaId(prev => prev === id ? null : id);
+  // Manejo de KPIManager modal
+  const [kpiManagerConfig, setKpiManagerConfig] = useState<{
+    areaId: string;
+    kpiId?: number | string;
+    mode: 'INS' | 'UPD';
+  } | null>(null);
+
+  // Estado del modal de confirmación de eliminación
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    areaId: string;
+    kpi: any;
+  } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const fetchKPIsForArea = async (areaId: string) => {
+    setLoadingKpis(prev => ({ ...prev, [areaId]: true }));
+    try {
+      const kpis = await CatalogosKPIService.getAreaKPIs(areaId);
+      setAreaKpis(prev => ({ ...prev, [areaId]: kpis }));
+    } catch (err) {
+      console.error(`Error cargando KPIs para el área ${areaId}`, err);
+    } finally {
+      setLoadingKpis(prev => ({ ...prev, [areaId]: false }));
+    }
   };
 
-  // Derive processed data
-  const processedData = data.map(k => ({ ...k }));
+  const toggleArea = (id: string) => {
+    setExpandedAreaId(prev => {
+      const next = prev === id ? null : id;
+      if (next) {
+        fetchKPIsForArea(next);
+      }
+      return next;
+    });
+  };
+
+  const handleDeleteKpi = (areaId: string, kpi: any) => {
+    setDeleteError(null);
+    setDeleteConfirm({ areaId, kpi });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirm) return;
+    const { areaId, kpi } = deleteConfirm;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await CatalogosKPIService.deleteKPI(kpi.ID);
+      fetchKPIsForArea(areaId);
+      setDeleteConfirm(null);
+    } catch (err: any) {
+      setDeleteError(err?.message || 'Ocurrió un error inesperado al eliminar el KPI.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -83,15 +132,17 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
                 </div>
               </div>
               <div className="flex gap-2 items-center">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAddKpi(area.id);
-                  }}
-                  className="relative z-10 bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm"
-                >
-                  <Plus size={16} className="inline mr-1" /> KPI
-                </button>
+                {role !== 'viewer' && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setKpiManagerConfig({ areaId: area.id, mode: 'INS' });
+                    }}
+                    className="relative z-10 bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm"
+                  >
+                    <Plus size={16} className="inline mr-1" /> KPI
+                  </button>
+                )}
                 <div className="text-slate-400 ml-2">
                   {expandedAreaId === area.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                 </div>
@@ -100,33 +151,59 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
 
             {expandedAreaId === area.id && (
               <div className="px-8 pb-8 border-t border-slate-100 pt-6 bg-slate-50/50">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {processedData.filter(k => k.areaId === area.id).map(kpi => (
-                    <div key={kpi.id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl group hover:border-blue-300 shadow-sm transition-all">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-white font-black text-xs shadow-sm"
-                          style={{ backgroundColor: SQCDP_CATEGORIES[kpi.cat].color }}
-                        >
-                          {kpi.cat}
+                {loadingKpis[area.id] ? (
+                  <div className="py-8 text-center text-slate-400 text-[10px] uppercase font-black tracking-widest">
+                    Cargando KPIs...
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {(areaKpis[area.id] || [])
+                      .filter(kpi => kpi.Activo !== false)
+                      .map(kpi => (
+                        <div key={kpi.ID} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl group hover:border-blue-300 shadow-sm transition-all">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-8 h-8 flex items-center justify-center rounded-lg text-white font-black text-xs shadow-sm text-center"
+                              style={{ backgroundColor: SQCDP_CATEGORIES[kpi.Categoria as keyof typeof SQCDP_CATEGORIES]?.color || '#64748b' }}
+                            >
+                              {kpi.Categoria}
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{kpi.Descripcion}</p>
+                              <p className="text-[9px] font-bold text-slate-400 uppercase">
+                                Meta: {kpi.Meta} {kpi.Unidaddemedida}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setKpiManagerConfig({ areaId: area.id, kpiId: kpi.ID, mode: 'UPD' });
+                              }}
+                              className="p-2 text-slate-500 hover:text-blue-600 transition-colors"
+                            >
+                              <Edit3 size={16} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteKpi(area.id, kpi);
+                              }}
+                              className="p-2 text-slate-500 hover:text-red-500 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{kpi.label}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase">Meta: {kpi.target} {kpi.unit}</p>
-                        </div>
+                      ))}
+                    {(areaKpis[area.id] || []).filter(kpi => kpi.Activo !== false).length === 0 && (
+                      <div className="col-span-full py-8 text-center text-slate-400 text-[10px] uppercase font-black tracking-widest border-2 border-dashed border-slate-200 rounded-2xl">
+                        No hay KPIs asignados a esta área
                       </div>
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); onEditKpi(kpi); }} className="p-2 text-slate-500 hover:text-blue-600 transition-colors"><Edit3 size={16} /></button>
-                        <button onClick={(e) => { e.stopPropagation(); onDeleteKpi(kpi.id); }} className="p-2 text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                      </div>
-                    </div>
-                  ))}
-                  {processedData.filter(k => k.areaId === area.id).length === 0 && (
-                    <div className="col-span-full py-8 text-center text-slate-400 text-[10px] uppercase font-black tracking-widest border-2 border-dashed border-slate-200 rounded-2xl">
-                      No hay KPIs asignados a esta área
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -154,6 +231,105 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
             onAreasUpdated();
           }} 
         />
+      )}
+
+      {kpiManagerConfig && (
+        <KPIManager
+          areaId={kpiManagerConfig.areaId}
+          kpiId={kpiManagerConfig.kpiId}
+          mode={kpiManagerConfig.mode}
+          onClose={() => setKpiManagerConfig(null)}
+          onSaved={() => {
+            fetchKPIsForArea(kpiManagerConfig.areaId);
+            setKpiManagerConfig(null);
+          }}
+        />
+      )}
+
+      {/* Modal Premium de Confirmación de Eliminación */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)' }}
+          onClick={() => { if (!deleting) { setDeleteConfirm(null); setDeleteError(null); } }}
+        >
+          <div
+            className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Cabecera roja */}
+            <div className="bg-gradient-to-br from-red-500 to-rose-600 px-8 pt-8 pb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center shadow-inner">
+                  <AlertTriangle size={28} className="text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-white uppercase tracking-tight">Eliminar KPI</h3>
+                  <p className="text-red-100 text-[10px] font-bold uppercase tracking-widest">Esta acción no se puede deshacer</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Cuerpo */}
+            <div className="px-8 py-6">
+              <p className="text-slate-600 text-sm mb-4">
+                ¿Estás seguro de que deseas eliminar permanentemente el siguiente indicador?
+              </p>
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center gap-3 mb-2">
+                <div
+                  className="w-9 h-9 flex items-center justify-center rounded-xl text-white font-black text-xs shadow-sm flex-shrink-0"
+                  style={{ backgroundColor: SQCDP_CATEGORIES[deleteConfirm.kpi.Categoria as keyof typeof SQCDP_CATEGORIES]?.color || '#64748b' }}
+                >
+                  {deleteConfirm.kpi.Categoria}
+                </div>
+                <div>
+                  <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight">{deleteConfirm.kpi.Descripcion}</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Meta: {deleteConfirm.kpi.Meta} {deleteConfirm.kpi.Unidaddemedida} · ID: {deleteConfirm.kpi.ID}</p>
+                </div>
+              </div>
+
+              {/* Mensaje de error */}
+              {deleteError && (
+                <div className="mt-4 bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-start gap-2">
+                  <AlertTriangle size={15} className="text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-red-700 text-[10px] font-bold">{deleteError}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Acciones */}
+            <div className="px-8 pb-8 flex gap-3">
+              <button
+                onClick={() => { setDeleteConfirm(null); setDeleteError(null); }}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-2xl border-2 border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:border-slate-300 hover:bg-slate-50 transition-all disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="flex-1 py-3 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white text-[10px] font-black uppercase tracking-widest shadow-lg hover:from-red-600 hover:to-rose-700 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <><Loader2 size={14} className="animate-spin" /> Eliminando...</>
+                ) : (
+                  <><Trash2 size={14} /> Eliminar KPI</>
+                )}
+              </button>
+            </div>
+
+            {/* Botón de cierre */}
+            {!deleting && (
+              <button
+                onClick={() => { setDeleteConfirm(null); setDeleteError(null); }}
+                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-xl bg-white/20 text-white hover:bg-white/30 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
