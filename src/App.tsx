@@ -205,6 +205,33 @@ export default function App() {
     return MONTHS[monthIndex] || MONTHS[0];
   };
 
+  const weekRange = useMemo(() => {
+    const year = parseInt(filters.year, 10) || 2026;
+    const week = parseInt(filters.week, 10) || 1;
+    
+    // ISO 8601: la semana 1 es la que contiene el primer jueves del año (o el 4 de enero)
+    const jan4 = new Date(year, 0, 4);
+    const day = jan4.getDay(); // 0 = Domingo, 1 = Lunes, etc.
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const mondayOfW1 = new Date(jan4.getTime() + diffToMonday * 24 * 60 * 60 * 1000);
+    
+    const startOfWeek = new Date(mondayOfW1.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
+    const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000);
+
+    const format = (d: Date) => {
+      const dd = String(d.getDate()).padStart(2, '0');
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    };
+
+    return {
+      start: format(startOfWeek),
+      end: format(endOfWeek)
+    };
+  }, [filters.year, filters.week]);
+
+
   const MONTH_MAP_TO_NUM: Record<string, number> = {
     'Enero': 1, 'Febrero': 2, 'Marzo': 3, 'Abril': 4, 'Mayo': 5, 'Junio': 6,
     'Julio': 7, 'Agosto': 8, 'Septiembre': 9, 'Octubre': 10, 'Noviembre': 11, 'Diciembre': 12
@@ -469,7 +496,7 @@ export default function App() {
               >
                 {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
-              <div className="flex items-center gap-1 pl-2 pr-1.5 py-0.5 bg-green-100 text-green-700 rounded-lg border border-green-200">
+              <div className="flex items-center gap-1 pl-2 pr-2 py-0.5 bg-green-100 text-green-700 rounded-lg border border-green-200">
                 <span className="text-[10px] font-black text-green-700 uppercase">W</span>
                 <select
                   value={filters.week}
@@ -478,10 +505,13 @@ export default function App() {
                     const newMonth = getMonthFromWeek(filters.year, newWeek);
                     setFilters(f => ({ ...f, week: newWeek, month: newMonth }));
                   }}
-                  className="bg-transparent text-[11px] font-black text-green-700 outline-none cursor-pointer appearance-none uppercase"
+                  className="bg-transparent text-[11px] font-black text-green-700 outline-none cursor-pointer appearance-none uppercase mr-1"
                 >
                   {WEEKS.map(w => <option key={w} value={w} className="text-slate-800 bg-white">{w}</option>)}
                 </select>
+                <span className="text-[9px] font-black text-green-600/80 border-l border-green-300 pl-1.5 whitespace-nowrap">
+                  {weekRange.start} - {weekRange.end}
+                </span>
               </div>
             </div>
 
