@@ -1,6 +1,6 @@
 import React from 'react';
 import { Info } from 'lucide-react';
-import { Kpi, UserRole, SqcdpCat, Status } from '../types';
+import { Kpi, UserRole, SqcdpCat, Status, KpiHistoricoSemanal } from '../types';
 import { SQCDP_CATEGORIES } from '../constants/data';
 import { KpiCard } from './KpiCard';
 
@@ -13,7 +13,8 @@ interface SqcdpPillarsProps {
     week: string;
   };
   role: UserRole;
-  onEdit: (kpi: Kpi) => void;
+  historicoMap: Record<number, KpiHistoricoSemanal>;
+  onEdit: (kpi: Kpi, historicoData?: KpiHistoricoSemanal) => void;
   onViewDetails: (kpi: Kpi) => void;
 }
 
@@ -35,6 +36,7 @@ export const SqcdpPillars: React.FC<SqcdpPillarsProps> = ({
   view,
   filters,
   role,
+  historicoMap,
   onEdit,
   onViewDetails
 }) => {
@@ -74,6 +76,7 @@ export const SqcdpPillars: React.FC<SqcdpPillarsProps> = ({
               {catKpis.length > 0 ? (
                 catKpis.map(k => {
                   const { value, comment } = getKpiStatus(k, filters.year, filters.month, filters.week);
+                  const historicoData = historicoMap[parseInt(k.id, 10)] || undefined;
                   return (
                     <KpiCard
                       key={k.id}
@@ -81,6 +84,7 @@ export const SqcdpPillars: React.FC<SqcdpPillarsProps> = ({
                       currentValue={value}
                       currentComment={comment}
                       role={role}
+                      historicoData={historicoData}
                       onEdit={onEdit}
                       onViewDetails={onViewDetails}
                     />

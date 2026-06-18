@@ -59,6 +59,10 @@ import { areaService } from './services/areaService';
 import { CatalogosKPIService } from './services/CatalogosKPI';
 import { KpiCard } from './components/KpiCard';
 import { SqcdpPillars } from './components/SqcdpPillars';
+import { KPIManagerHistorico } from './components/KPIManagerHistorico';
+import { kpiHistoricoService } from './services/kpiHistoricoService';
+import { KpiHistoricoSemanal } from './types';
+import { KPIDetailsModal } from './components/KPIDetailsModal';
 
 // --- Utility Components ---
 
@@ -175,6 +179,10 @@ export default function App() {
   }, []);
 
   const [editingKpi, setEditingKpi] = useState<Kpi | null>(null);
+  const [selectedHistoricoData, setSelectedHistoricoData] = useState<KpiHistoricoSemanal | undefined>(undefined);
+  const [historicoMap, setHistoricoMap] = useState<Record<number, KpiHistoricoSemanal>>({});
+  const [loadingHistorico, setLoadingHistorico] = useState(false);
+  const [historicoError, setHistoricoError] = useState<string | null>(null);
   const [viewingKpiDetails, setViewingKpiDetails] = useState<Kpi | null>(null);
   const [toast, setToast] = useState<{ message: string; type?: 'error' | 'info' } | null>(null);
   const [confirmToggle, setConfirmToggle] = useState<Kpi | null>(null);
@@ -182,10 +190,57 @@ export default function App() {
 
   // Estados de filtros
   const [filters, setFilters] = useState({
-    year: '2026',
+    year: YEARS[YEARS.length - 1] || '2026',
     month: 'Mayo',
     week: '19'
   });
+
+  const getMonthFromWeek = (yearStr: string, weekStr: string): string => {
+    const year = parseInt(yearStr, 10) || 2026;
+    const week = parseInt(weekStr, 10) || 1;
+    const janFirst = new Date(year, 0, 1);
+    const daysOffset = (week - 1) * 7 + 3;
+    const targetDate = new Date(janFirst.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+    const monthIndex = targetDate.getMonth();
+    return MONTHS[monthIndex] || MONTHS[0];
+  };
+
+  const MONTH_MAP_TO_NUM: Record<string, number> = {
+    'Enero': 1, 'Febrero': 2, 'Marzo': 3, 'Abril': 4, 'Mayo': 5, 'Junio': 6,
+    'Julio': 7, 'Agosto': 8, 'Septiembre': 9, 'Octubre': 10, 'Noviembre': 11, 'Diciembre': 12
+  };
+
+  const fetchHistorico = async () => {
+    if (view === 'overview' || view === 'master') {
+      setHistoricoMap({});
+      return;
+    }
+    setLoadingHistorico(true);
+    setHistoricoError(null);
+    try {
+      const yearNum = parseInt(filters.year, 10);
+      const monthNum = MONTH_MAP_TO_NUM[filters.month] || 1;
+      const weekNum = parseInt(filters.week, 10);
+      const list = await kpiHistoricoService.getHistoricoSemanal(yearNum, monthNum, weekNum, view);
+      
+      const map: Record<number, KpiHistoricoSemanal> = {};
+      list.forEach(item => {
+        map[item.KPIID] = item;
+      });
+      setHistoricoMap(map);
+    } catch (err: any) {
+      console.error('Error fetching historico:', err);
+      setHistoricoError(err.message || 'Error al obtener datos históricos del servicio.');
+      setHistoricoMap({});
+    } finally {
+      setLoadingHistorico(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHistorico();
+  }, [view, filters.year, filters.month, filters.week]);
+
 
   // Helpers
   const getKpiStatus = (k: Kpi, year: string, month: string, week: string) => {
@@ -368,193 +423,7 @@ export default function App() {
 
   const currentArea = view !== 'overview' && view !== 'master' ? areas.find(a => a.id === view) : null;
 
-  const KpiDetailsView = ({ kpi }: { kpi: Kpi }) => {
-    const chartData = useMemo(() => {
-      // Get all history, sort by time (roughly by year/month/week)
-      return [...kpi.history]
-        .sort((a, b) => {
-          const timeA = `${a.year}-${MONTHS.indexOf(a.month).toString().padStart(2, '0')}-W${a.week.padStart(2, '0')}`;
-          const timeB = `${b.year}-${MONTHS.indexOf(b.month).toString().padStart(2, '0')}-W${b.week.padStart(2, '0')}`;
-          return timeA.localeCompare(timeB);
-        })
-        .map(h => ({
-          name: `W${h.week}`,
-          value: h.value,
-          target: kpi.target,
-          full: `${h.month} ${h.year} - W${h.week}`
-        }));
-    }, [kpi]);
 
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => setViewingKpiDetails(null)}
-          className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-        />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative bg-white rounded-[2.5rem] w-full max-w-5xl h-[85vh] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden border border-slate-200 flex flex-col"
-        >
-          {/* Header */}
-          <div className="bg-slate-50 px-10 py-8 border-b border-slate-100 flex justify-between items-center">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className="w-10 h-10 flex items-center justify-center rounded-xl text-white font-black text-xl shadow-lg"
-                  style={{ backgroundColor: SQCDP_CATEGORIES[kpi.cat]?.color || '#60a5fa' }}
-                >
-                  {kpi.cat}
-                </div>
-                <h3 className="text-3xl font-black text-slate-800 tracking-tighter uppercase">{kpi.label}</h3>
-              </div>
-              <div className="flex gap-4 ml-1">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                  <Factory size={10} /> Área: {areas.find(a => a.id === kpi.areaId)?.name}
-                </span>
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                  <Target size={10} /> Meta Semestral: {kpi.target} {kpi.unit}
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => setViewingKpiDetails(null)}
-              className="p-4 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-slate-600 shadow-sm transition-all active:scale-90"
-            >
-              <X size={24} />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-10 custom-scrollbar space-y-12">
-            {/* Chart Section */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-end">
-                <h4 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">Gráfico de Tendencia Histórica</h4>
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-blue-600 rounded-full" />
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Real</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-400 rounded-full" />
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">Meta</span>
-                  </div>
-                </div>
-              </div>
-              <div className="h-72 w-full bg-slate-50/50 rounded-3xl p-6 border border-slate-100 relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
-                      dy={10}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-slate-900 text-white p-3 rounded-xl shadow-2xl border border-slate-700">
-                              <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{payload[0].payload.full}</p>
-                              <p className="text-sm font-black mt-1">{payload[0].value} {kpi.unit}</p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <ReferenceLine y={kpi.target} stroke="#f87171" strokeDasharray="3 3" />
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke="#2563eb"
-                      strokeWidth={4}
-                      dot={{ r: 6, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }}
-                      activeDot={{ r: 8, strokeWidth: 0 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-                {/* ACR Alert: mostrar aquí si requiere_acr */}
-                {kpi.requiere_acr && (
-                  <div className="absolute right-8 top-24 bg-white rounded-md shadow-2xl p-3 border border-red-100 w-52">
-                    <div className="text-xs font-black text-red-600 uppercase">⚠️ Generar ACR</div>
-                    <div className="text-[12px] text-slate-600 mt-2">Este KPI ha mostrado 2 tendencias negativas consecutivas. Inicia Análisis de Causa Raíz.</div>
-                    <div className="mt-3 flex justify-end">
-                      <button className="px-3 py-1 rounded-xl bg-red-600 text-white font-black text-sm">Generar ACR</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Table Section */}
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">Historial de Registros</h4>
-                <button className="text-[10px] font-black text-blue-600 uppercase hover:underline">Descargar CSV</button>
-              </div>
-              <div className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
-                <table className="w-full text-left">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Periodo</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Comentario / Causa Raíz</th>
-                      <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Actualizado</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {[...kpi.history].reverse().map(h => {
-                      const ratio = kpi.dir === 1 ? h.value / kpi.target : kpi.target / h.value;
-                      const st: Status = ratio >= 0.98 ? 'green' : (ratio >= 0.9 ? 'yellow' : 'red');
-                      return (
-                        <tr key={h.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-5">
-                            <p className="text-[11px] font-black text-slate-800">{h.month} {h.year}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Semana {h.week}</p>
-                          </td>
-                          <td className="px-6 py-5">
-                            <span className="text-sm font-black text-slate-700">{h.value}</span>
-                            <span className="text-[9px] font-bold text-slate-400 ml-1">{kpi.unit}</span>
-                          </td>
-                          <td className="px-6 py-5">
-                            <StatusBadge status={st} />
-                          </td>
-                          <td className="px-6 py-5">
-                            <p className="text-[11px] text-slate-600 font-medium max-w-md line-clamp-2">{h.comment || '-'}</p>
-                          </td>
-                          <td className="px-6 py-5 text-right">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase">{new Date(h.updatedAt).toLocaleDateString()}</p>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {kpi.history.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-slate-300 font-black uppercase text-xs tracking-widest">No hay registros históricos</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
-  };
 
   if (!user) {
     return <LoginScreen onLoginSuccess={(loginData) => setUser(loginData.user)} />;
@@ -583,7 +452,11 @@ export default function App() {
                 <Calendar size={16} className="text-slate-600" />
                 <select
                   value={filters.year}
-                  onChange={(e) => setFilters(f => ({ ...f, year: e.target.value }))}
+                  onChange={(e) => {
+                    const newYear = e.target.value;
+                    const newMonth = getMonthFromWeek(newYear, filters.week);
+                    setFilters(f => ({ ...f, year: newYear, month: newMonth }));
+                  }}
                   className="bg-transparent text-[11px] font-black text-slate-700 outline-none cursor-pointer appearance-none uppercase"
                 >
                   {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
@@ -596,14 +469,18 @@ export default function App() {
               >
                 {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
-              <div className="flex items-center gap-1 pl-1">
-                <span className="text-[10px] font-black text-slate-500 uppercase">W</span>
+              <div className="flex items-center gap-1 pl-2 pr-1.5 py-0.5 bg-green-100 text-green-700 rounded-lg border border-green-200">
+                <span className="text-[10px] font-black text-green-700 uppercase">W</span>
                 <select
                   value={filters.week}
-                  onChange={(e) => setFilters(f => ({ ...f, week: e.target.value }))}
-                  className="bg-transparent text-[11px] font-black text-slate-700 outline-none cursor-pointer appearance-none uppercase"
+                  onChange={(e) => {
+                    const newWeek = e.target.value;
+                    const newMonth = getMonthFromWeek(filters.year, newWeek);
+                    setFilters(f => ({ ...f, week: newWeek, month: newMonth }));
+                  }}
+                  className="bg-transparent text-[11px] font-black text-green-700 outline-none cursor-pointer appearance-none uppercase"
                 >
-                  {WEEKS.map(w => <option key={w} value={w}>{w}</option>)}
+                  {WEEKS.map(w => <option key={w} value={w} className="text-slate-800 bg-white">{w}</option>)}
                 </select>
               </div>
             </div>
@@ -909,7 +786,11 @@ export default function App() {
                     view={view}
                     filters={filters}
                     role={role}
-                    onEdit={(kpi) => setEditingKpi(kpi)}
+                    historicoMap={historicoMap}
+                    onEdit={(kpi, historicoData) => {
+                      setEditingKpi(kpi);
+                      setSelectedHistoricoData(historicoData);
+                    }}
                     onViewDetails={(kpi) => setViewingKpiDetails(kpi)}
                   />
                 </motion.div>
@@ -954,7 +835,14 @@ export default function App() {
             </div>
           </div>
         )}
-        {viewingKpiDetails && <KpiDetailsView kpi={viewingKpiDetails} />}
+        {viewingKpiDetails && (
+          <KPIDetailsModal
+            kpi={viewingKpiDetails}
+            ano={parseInt(filters.year, 10)}
+            areas={areas}
+            onClose={() => setViewingKpiDetails(null)}
+          />
+        )}
       </AnimatePresence>
 
       {/* Modal Edición Admin */}
@@ -1029,116 +917,29 @@ export default function App() {
         )}
 
         {editingKpi && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setEditingKpi(null)}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-md"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden border border-slate-200"
-            >
-              <div className="bg-slate-50 px-8 py-8 border-b border-slate-100 flex justify-between items-center">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div
-                      className="w-6 h-6 flex items-center justify-center rounded text-white font-black text-[10px]"
-                      style={{ backgroundColor: SQCDP_CATEGORIES[editingKpi.cat]?.color || '#60a5fa' }}
-                    >
-                      {editingKpi.cat}
-                    </div>
-                    <h3 className="text-lg font-black text-slate-800 tracking-tight">Editar Indicador</h3>
-                  </div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{editingKpi.label}</p>
-                </div>
-                <button onClick={() => setEditingKpi(null)} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-all"><X size={20} /></button>
-              </div>
-              <form onSubmit={handleSaveKpiValue} className="p-8 space-y-6">
-                <div className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 mb-4">
-                  <div className="flex-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase">Año</label>
-                    <select name="year" defaultValue={filters.year} readOnly={role !== 'admin'} className="w-full bg-transparent text-[10px] font-black outline-none">
-                      {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase">Mes</label>
-                    <select name="month" defaultValue={filters.month} readOnly={role !== 'admin'} className="w-full bg-transparent text-[10px] font-black outline-none">
-                      {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-[9px] font-black text-slate-400 uppercase">Semana</label>
-                    <select name="week" defaultValue={filters.week} readOnly={role !== 'admin'} className="w-full bg-transparent text-[10px] font-black outline-none">
-                      {WEEKS.map(w => <option key={w} value={w}>{w}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Valor Actual ({editingKpi.unit})</label>
-                    <input
-                      name="value"
-                      type="number"
-                      step="any"
-                      defaultValue={getKpiStatus(editingKpi, filters.year, filters.month, filters.week).value}
-                      autoFocus
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Meta {role === 'admin' ? '(Editable)' : '(Fija)'}</label>
-                    <input
-                      name="target"
-                      type="number"
-                      step="any"
-                      defaultValue={editingKpi.target}
-                      readOnly={role !== 'admin'}
-                      className={cn(
-                        "w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black outline-none transition-all",
-                        role === 'admin' ? 'focus:ring-4 focus:ring-blue-100 focus:border-blue-500' : 'opacity-60 cursor-not-allowed'
-                      )}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Comentario / Análisis de Causa</label>
-                  <textarea
-                    name="comment"
-                    defaultValue={getKpiStatus(editingKpi, filters.year, filters.month, filters.week).comment}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-xs font-bold focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none h-28 resize-none transition-all"
-                    placeholder="Describe la desviación o acción correctiva..."
-                  ></textarea>
-                </div>
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Pilar (SQCDP)</label>
-                    <select name="cat" defaultValue={editingKpi.cat} disabled={role !== 'admin'} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all appearance-none">
-                      <option value="S">Seguridad (S)</option>
-                      <option value="Q">Calidad (Q)</option>
-                      <option value="C">Costos (C)</option>
-                      <option value="D">Entrega (D)</option>
-                      <option value="P">Personas (P)</option>
-                    </select>
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-100 transition-all active:scale-[0.98] uppercase text-[11px] tracking-widest"
-                >
-                  Confirmar Registro
-                </button>
-              </form>
-            </motion.div>
-          </div>
+          <KPIManagerHistorico
+            areaId={view}
+            kpiId={parseInt(editingKpi.id, 10)}
+            kpiLabel={editingKpi.label}
+            kpiUnit={editingKpi.unit}
+            kpiCat={editingKpi.cat}
+            historicoId={selectedHistoricoData ? selectedHistoricoData.Historico : '0'}
+            ano={parseInt(filters.year, 10)}
+            mes={MONTH_MAP_TO_NUM[filters.month] || 1}
+            semana={parseInt(filters.week, 10)}
+            userEmail={user.email}
+            initialValor={selectedHistoricoData ? selectedHistoricoData.Valor : ''}
+            initialComentarios={selectedHistoricoData ? selectedHistoricoData.Comentarios : ''}
+            onClose={() => {
+              setEditingKpi(null);
+              setSelectedHistoricoData(undefined);
+            }}
+            onSaved={() => {
+              setEditingKpi(null);
+              setSelectedHistoricoData(undefined);
+              fetchHistorico();
+            }}
+          />
         )}
       </AnimatePresence>
 

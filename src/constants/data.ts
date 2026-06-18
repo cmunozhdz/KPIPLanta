@@ -235,5 +235,10 @@ export const MONTHS = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-export const YEARS = ['2024', '2025', '2026'];
+const currentYear = new Date().getFullYear();
+const startYear = 2026;
+export const YEARS = Array.from(
+  { length: Math.max(1, currentYear - startYear + 1) },
+  (_, i) => String(startYear + i)
+);
 export const WEEKS = Array.from({ length: 52 }, (_, i) => `${i + 1}`);

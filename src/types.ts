@@ -28,6 +28,26 @@ export interface Kpi {
   tendencia_actual?: 'up' | 'down' | 'stable';
 }
 
+export interface KpiHistoricoSemanal {
+  Historico: string;       // "0" = sin registro (insert), ≠"0" = existe (edit)
+  Registro: string;
+  Usuario: string;
+  AreaId: string;
+  AreaDescripcion: string;
+  CategoriaID: string;     // S, Q, C, D, P
+  KPIID: number;
+  MetaActual: string;
+  MetaAsignada: string;
+  Valor: string;           // Valor actual del KPI
+  Ano: number;
+  Mes: number;
+  Semana: number;
+  Comentarios: string;
+  FechaConsulta: string;
+  Descripcion: string;
+  KPIActivo: boolean;
+}
+
 export interface Area {
   id: string;
   name: string;
