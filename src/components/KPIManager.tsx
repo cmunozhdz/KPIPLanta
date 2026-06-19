@@ -135,7 +135,8 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
       Direccion: Number(direccion),
       Unidaddemedida: unidaddemedida,
       AreaId: areaId,
-      Activo: activo
+      Activo: activo,
+      AreaKPIActivo: activo
     };
 
     try {

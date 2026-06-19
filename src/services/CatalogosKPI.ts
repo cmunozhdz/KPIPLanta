@@ -32,7 +32,7 @@ export const CatalogosKPIService = {
     const fechaStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${ms}`;
 
     // GET a https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIAPI/area_kpis?&Areaid={Area}&Limit=100&Offset=0&consulta="{Fecha}"&AreaKPIActivo=true
-    const url = `${getKpiApiUrl()}?Areaid=${areaId}&Limit=100&Offset=0&consulta=${encodeURIComponent(`"${fechaStr}"`)}&AreaKPIActivo=true`;
+    const url = `${getKpiApiUrl()}?Areaid=${areaId}&Limit=100&Offset=0&consulta=${encodeURIComponent(`"${fechaStr}"`)}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Error al obtener KPIs del área (HTTP ${response.status})`);

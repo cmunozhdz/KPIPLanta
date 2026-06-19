@@ -158,9 +158,13 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {(areaKpis[area.id] || [])
-                      .filter(kpi => kpi.Activo !== false)
                       .map(kpi => (
-                        <div key={kpi.ID} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl group hover:border-blue-300 shadow-sm transition-all">
+                        <div key={kpi.ID} className={cn(
+                          "flex items-center justify-between p-4 rounded-2xl group hover:border-blue-300 shadow-sm transition-all border",
+                          kpi.Activo === false 
+                            ? "bg-slate-50/70 border-dashed border-slate-300 opacity-70" 
+                            : "bg-white border-slate-200"
+                        )}>
                           <div className="flex items-center gap-3">
                             <div
                               className="w-8 h-8 flex items-center justify-center rounded-lg text-white font-black text-xs shadow-sm text-center"
@@ -169,7 +173,14 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
                               {kpi.Categoria}
                             </div>
                             <div>
-                              <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{kpi.Descripcion}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{kpi.Descripcion}</p>
+                                {kpi.Activo === false && (
+                                  <span className="px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-500 text-[8px] font-black uppercase tracking-wider">
+                                    Inactivo
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[9px] font-bold text-slate-400 uppercase">
                                 Meta: {kpi.Meta} {kpi.Unidaddemedida}
                               </p>
@@ -197,7 +208,7 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
                           </div>
                         </div>
                       ))}
-                    {(areaKpis[area.id] || []).filter(kpi => kpi.Activo !== false).length === 0 && (
+                    {(areaKpis[area.id] || []).length === 0 && (
                       <div className="col-span-full py-8 text-center text-slate-400 text-[10px] uppercase font-black tracking-widest border-2 border-dashed border-slate-200 rounded-2xl">
                         No hay KPIs asignados a esta área
                       </div>

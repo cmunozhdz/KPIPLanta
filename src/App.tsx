@@ -142,18 +142,20 @@ export default function App() {
               console.warn(`[KPIs] Área ${area.id}: respuesta no es un array`, rawKpis);
               return [];
             }
-            // Mapeamos el formato de la API al formato Kpi interno utilizado por el Dashboard
-            return rawKpis.map((rk: any) => ({
-              id: String(rk.ID),
-              areaId: rk.AreaId || area.id,
-              cat: (rk.Categoria as SqcdpCat) || 'S',
-              label: rk.Descripcion || 'Sin descripción',
-              target: parseFloat(rk.Meta) || 0,
-              dir: rk.Direccion === 2 ? -1 : 1,
-              unit: rk.Unidaddemedida || '',
-              is_visible_top: rk.Activo ?? true,
-              history: [] // La API de histórico no está especificada en esta historia
-            }));
+            // Mapeamos el formato de la API al formato Kpi interno utilizado por el Dashboard (solo KPIs activos)
+            return rawKpis
+              .filter((rk: any) => rk.Activo !== false)
+              .map((rk: any) => ({
+                id: String(rk.ID),
+                areaId: rk.AreaId || area.id,
+                cat: (rk.Categoria as SqcdpCat) || 'S',
+                label: rk.Descripcion || 'Sin descripción',
+                target: parseFloat(rk.Meta) || 0,
+                dir: rk.Direccion === 2 ? -1 : 1,
+                unit: rk.Unidaddemedida || '',
+                is_visible_top: rk.Activo ?? true,
+                history: [] // La API de histórico no está especificada en esta historia
+              }));
           } catch (err) {
             console.error(`Error cargando KPIs para área ${area.id}`, err);
             return [];
