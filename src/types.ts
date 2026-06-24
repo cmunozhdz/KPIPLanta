@@ -46,6 +46,7 @@ export interface KpiHistoricoSemanal {
   FechaConsulta: string;
   Descripcion: string;
   KPIActivo: boolean;
+  Calificacion?: string;
 }
 
 export interface Area {

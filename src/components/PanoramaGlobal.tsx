@@ -60,22 +60,40 @@ export const PanoramaGlobal: React.FC<PanoramaGlobalProps> = ({
   globalChartData
 }) => {
   const [counts, setCounts] = useState({ verde: 0, amarillo: 0, rojo: 0 });
+  const [desempenoGlobal, setDesempenoGlobal] = useState<{
+    SemanaActual: number;
+    SemanaAnterior: number;
+    Historico: { Semana: number; Valor: number }[];
+  } | null>(null);
+  const [desempenoPilar, setDesempenoPilar] = useState<{
+    AreaId: string;
+    AreaDescripcion: string;
+    KPIVerde: number;
+    TotalKPI: number;
+    KPIHistoricoAnio: number;
+    KPIHistoricoSemana: number;
+  }[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    const fetchCounts = async () => {
+    const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await kpiHistoricoService.getCalificaciones(filters.year, filters.week);
+        const [countsRes, desempenoRes, desempenoPilarRes] = await Promise.all([
+          kpiHistoricoService.getCalificaciones(filters.year, filters.week),
+          kpiHistoricoService.getDesempenoGlobal(filters.year, filters.week),
+          kpiHistoricoService.getDesempenoXPilar(filters.year, filters.week)
+        ]);
+
         if (isMounted) {
           let verde = 0;
           let amarillo = 0;
           let rojo = 0;
-          if (Array.isArray(response)) {
-            response.forEach((item: any) => {
+          if (Array.isArray(countsRes)) {
+            countsRes.forEach((item: any) => {
               const calif = item.Calificacion?.toLowerCase();
               if (calif === 'verde') verde = item.Contador || 0;
               else if (calif === 'amarillo') amarillo = item.Contador || 0;
@@ -83,11 +101,23 @@ export const PanoramaGlobal: React.FC<PanoramaGlobalProps> = ({
             });
           }
           setCounts({ verde, amarillo, rojo });
+          setDesempenoGlobal(desempenoRes);
+
+          // Ordenar por porcentaje de cumplimiento descendente
+          const sortedPilar = (desempenoPilarRes || []).slice().sort((a: any, b: any) => {
+            const pctA = a.TotalKPI > 0 ? (a.KPIVerde / a.TotalKPI) : 0;
+            const pctB = b.TotalKPI > 0 ? (b.KPIVerde / b.TotalKPI) : 0;
+            if (pctB !== pctA) {
+              return pctB - pctA;
+            }
+            return b.TotalKPI - a.TotalKPI;
+          });
+          setDesempenoPilar(sortedPilar);
         }
       } catch (err: any) {
-        console.error('Error fetching calificaciones:', err);
+        console.error('Error fetching dashboard data:', err);
         if (isMounted) {
-          setError(err.message || 'Error al obtener calificaciones');
+          setError(err.message || 'Error al obtener datos del tablero');
         }
       } finally {
         if (isMounted) {
@@ -96,7 +126,7 @@ export const PanoramaGlobal: React.FC<PanoramaGlobalProps> = ({
       }
     };
 
-    fetchCounts();
+    fetchData();
     return () => {
       isMounted = false;
     };
@@ -148,46 +178,42 @@ export const PanoramaGlobal: React.FC<PanoramaGlobalProps> = ({
         <div className="bg-blue-600 p-6 rounded-2xl text-white shadow-xl shadow-blue-100 flex flex-col justify-between relative overflow-hidden">
           <p className="text-[10px] font-black text-blue-200 uppercase tracking-[0.2em] mb-1">Desempeño Total</p>
           {(() => {
-            const today = new Date();
-            const trendData = Array.from({ length: 7 }).map((_, i) => {
-              const d = new Date(today);
-              d.setDate(today.getDate() - (6 - i));
-              const base = data.length > 0 ? Math.round((data.filter(k => {
-                const { status } = getKpiStatus(k, filters.year, filters.month, (parseInt(filters.week) - (6 - i)).toString().padStart(2, '0'));
-                return status === 'green';
-              }).length / data.length) * 100) : 0;
-              return {
-                fecha: d.toISOString().slice(0, 10),
-                oee: base + (Math.random() * 4 - 2)
-              };
-            });
-            const oeeActual = trendData[6]?.oee ?? 0;
-            const oeeAnterior = trendData[5]?.oee ?? 0;
-            const delta = oeeActual - oeeAnterior;
-            const meta = 85;
+            if (loading && !desempenoGlobal) {
+              return (
+                <div className="flex items-center justify-center h-24">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                </div>
+              );
+            }
+
+            const valActual = desempenoGlobal?.SemanaActual ?? 0;
+            const valAnterior = desempenoGlobal?.SemanaAnterior ?? 0;
+            const trendData = desempenoGlobal?.Historico ?? [];
+
             return (
               <>
                 <div className="flex flex-col items-start mb-2">
                   <div className="flex items-baseline gap-2">
                     <div className="relative flex flex-col items-start">
-                      <h3 className="text-4xl font-black tracking-tighter leading-none" style={{ minWidth: '90px', width: 'fit-content', textAlign: 'left' }}>{Math.round(oeeActual)}%</h3>
+                      <h3 className="text-4xl font-black tracking-tighter leading-none" style={{ minWidth: '90px', width: 'fit-content', textAlign: 'left' }}>
+                        {valActual}%
+                      </h3>
                       <div style={{ width: '90px', maxWidth: '100%' }} className="mt-1 h-6 flex items-center justify-start">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={trendData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-                            <ReferenceLine y={meta} stroke="#fbbf24" strokeDasharray="4 2" label={{ value: 'Meta', position: 'right', fill: '#fbbf24', fontSize: 10, fontWeight: 700 }} />
-                            <Line type="monotone" dataKey="oee" stroke="#fff" strokeWidth={2.2} dot={false} isAnimationActive={true} />
-                          </LineChart>
-                        </ResponsiveContainer>
+                        {trendData.length > 0 && (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={trendData} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                              <Line type="monotone" dataKey="Valor" stroke="#fff" strokeWidth={2.2} dot={false} isAnimationActive={true} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        )}
                       </div>
                     </div>
-                    <span className={
-                      "flex items-center text-xs font-bold ml-2 " +
-                      (delta > 0 ? 'text-green-300' : delta < 0 ? 'text-red-300' : 'text-blue-200')
-                    }>
-                      {delta > 0 && <TrendingUp size={16} className="mr-1" />}
-                      {delta < 0 && <TrendingDown size={16} className="mr-1" />}
-                      {delta === 0 && <span className="mr-1">→</span>}
-                      {delta > 0 ? `+${delta.toFixed(1)}%` : delta < 0 ? `${delta.toFixed(1)}%` : '0.0%'}
+                    <span className={cn(
+                      "flex items-center text-xs font-bold ml-2",
+                      valAnterior >= 0 ? "text-green-300" : "text-red-300"
+                    )}>
+                      {valAnterior >= 0 ? <TrendingUp size={16} className="mr-1" /> : <TrendingDown size={16} className="mr-1" />}
+                      {valAnterior >= 0 ? `+${valAnterior}%` : `${valAnterior}%`}
                     </span>
                   </div>
                   <Zap size={24} className="text-yellow-300 ml-2" />
@@ -217,44 +243,56 @@ export const PanoramaGlobal: React.FC<PanoramaGlobalProps> = ({
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Estado actual de cumplimiento de metas por pilar WCM</p>
           </div>
         </div>
-        <div className="h-80 w-full">
+        <div className="h-96 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={globalChartData}
+              data={desempenoPilar}
               layout="vertical"
+              barGap="-100%"
               margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
             >
               <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
-              <XAxis type="number" domain={[0, 100]} hide />
+              <XAxis type="number" domain={[0, 'dataMax + 1']} hide />
               <YAxis
-                dataKey="name"
+                dataKey="AreaDescripcion"
                 type="category"
                 axisLine={false}
                 tickLine={false}
-                width={140}
-                tick={{ fontSize: 11, fontWeight: 900, fill: '#64748b', textAnchor: 'end' }}
+                width={150}
+                tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b', textAnchor: 'end' }}
               />
               <Tooltip
                 cursor={{ fill: '#f8fafc' }}
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
+                    const dataEntry = payload[0].payload;
+                    const pct = dataEntry.TotalKPI > 0 ? Math.round((dataEntry.KPIVerde / dataEntry.TotalKPI) * 100) : 0;
                     return (
                       <div className="bg-slate-900 text-white p-3 rounded-xl shadow-2xl border border-slate-700">
-                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{payload[0].payload.name}</p>
-                        <p className="text-sm font-black mt-1">{payload[0].value}% OK</p>
+                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{dataEntry.AreaDescripcion}</p>
+                        <p className="text-sm font-black mt-1">{dataEntry.KPIVerde} de {dataEntry.TotalKPI} KPIs en Cumplidos ({pct}%)</p>
                       </div>
                     );
                   }
                   return null;
                 }}
               />
-              <Bar dataKey="score" radius={[0, 8, 8, 0]} barSize={24}>
-                {globalChartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.score >= 98 ? '#22c55e' : (entry.score >= 90 ? '#f59e0b' : '#ef4444')}
-                  />
-                ))}
+              {/* TotalKPI (Fondo) */}
+              <Bar dataKey="TotalKPI" fill="#e2e8f0" radius={[0, 8, 8, 0]} barSize={24} />
+              {/* KPIVerde (Frente) */}
+              <Bar dataKey="KPIVerde" radius={[0, 8, 8, 0]} barSize={14}>
+                {desempenoPilar.map((entry, index) => {
+                  const pct = entry.TotalKPI > 0 ? (entry.KPIVerde / entry.TotalKPI) * 100 : 0;
+                  let color = '#ef4444'; // Rojo por defecto
+                  if (entry.TotalKPI === 0) {
+                    color = '#cbd5e1'; // Gris si no hay KPIs
+                  } else if (pct >= 100) {
+                    color = '#22c55e'; // Verde si está al 100%
+                  } else if (pct >= 50) {
+                    color = '#f59e0b'; // Amarillo/Ambar
+                  }
+                  return <Cell key={`cell-${index}`} fill={color} />;
+                })}
               </Bar>
             </BarChart>
           </ResponsiveContainer>

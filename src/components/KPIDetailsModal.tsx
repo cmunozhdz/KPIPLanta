@@ -108,10 +108,18 @@ export const KPIDetailsModal: React.FC<KPIDetailsModalProps> = ({
     const rows = historyList.map(h => {
       const val = parseFloat(h.Valor) || 0;
       const target = parseFloat(h.MetaAsignada) || parseFloat(h.MetaActual) || kpi.target;
-      const ratio = kpi.dir === 1 ? val / target : target / val;
+
       let stText = 'Crítico';
-      if (ratio >= 0.98) stText = 'En Meta';
-      else if (ratio >= 0.90) stText = 'Alerta';
+      if (h.Calificacion) {
+        const cal = h.Calificacion.toLowerCase();
+        if (cal === 'Verde') stText = 'En Meta';
+        else if (cal === 'Amarillo') stText = 'Alerta';
+        else if (cal === 'Rojo') stText = 'Crítico';
+      } else {
+        const ratio = kpi.dir === 1 ? val / target : target / val;
+        if (ratio >= 0.98) stText = 'En Meta';
+        else if (ratio >= 0.90) stText = 'Alerta';
+      }
 
       return [
         `Semana ${h.Semana}`,
@@ -313,8 +321,17 @@ export const KPIDetailsModal: React.FC<KPIDetailsModalProps> = ({
                       {[...historyList].reverse().map(h => {
                         const val = parseFloat(h.Valor) || 0;
                         const target = parseFloat(h.MetaActual) || kpi.target;
-                        const ratio = kpi.dir === 1 ? val / target : target / val;
-                        const st: Status = ratio >= 0.98 ? 'green' : (ratio >= 0.9 ? 'yellow' : 'red');
+
+                        let st: Status = 'red';
+                        if (h.Calificacion) {
+                          const cal = h.Calificacion.toLowerCase();
+                          if (cal === 'verde') st = 'green';
+                          else if (cal === 'amarillo') st = 'yellow';
+                          else if (cal === 'rojo') st = 'red';
+                        } else {
+                          const ratio = kpi.dir === 1 ? val / target : target / val;
+                          st = ratio >= 0.98 ? 'green' : (ratio >= 0.9 ? 'yellow' : 'red');
+                        }
                         return (
                           <tr key={h.Historico} className="hover:bg-slate-50/50 transition-colors">
                             <td className="px-6 py-5">

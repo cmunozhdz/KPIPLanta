@@ -48,6 +48,12 @@ export const KpiCard: React.FC<KpiCardProps> = ({
     : (currentComment || 'Sin registro');
 
   const calculateStatus = (k: Kpi, val: number): Status => {
+    if (historicoData?.Calificacion) {
+      const cal = historicoData.Calificacion.toLowerCase();
+      if (cal === 'verde') return 'green';
+      if (cal === 'amarillo') return 'yellow';
+      if (cal === 'rojo') return 'red';
+    }
     if (val === 0 || isNaN(val)) return 'red';
     const ratio = k.dir === 1 ? val / k.target : k.target / val;
     if (ratio >= 0.98) return 'green';

@@ -200,5 +200,54 @@ export const kpiHistoricoService = {
     }
 
     return await response.json();
+  },
+
+  /**
+   * GET: Obtener desempeño global y su histórico
+   * Endpoint: /kiosco/Apis/Planta/DesempenoGlobal
+   */
+  getDesempenoGlobal: async (
+    ano: string,
+    semana: string
+  ): Promise<{ SemanaActual: number; SemanaAnterior: number; Historico: { Semana: number; Valor: number }[] }> => {
+    const pad = (num: number) => num.toString().padStart(2, '0');
+    const now = new Date();
+    const fechaConsulta = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const url = `${getBaseApiUrl()}/DesempenoGlobal?Fechaconsulta=${encodeURIComponent(fechaConsulta)}&ANIO=${ano}&Kpihistoricosemana=${semana}`;
+
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Error al obtener desempeño global (HTTP ${response.status})`);
+    }
+
+    return await response.json();
+  },
+
+  /**
+   * GET: Obtener desempeño por pilar de cada área
+   * Endpoint: /kiosco/Apis/Planta/DesempenoXPilar
+   */
+  getDesempenoXPilar: async (
+    ano: string,
+    semana: string
+  ): Promise<{
+    AreaId: string;
+    AreaDescripcion: string;
+    KPIVerde: number;
+    TotalKPI: number;
+    KPIHistoricoAnio: number;
+    KPIHistoricoSemana: number;
+  }[]> => {
+    const pad = (num: number) => num.toString().padStart(2, '0');
+    const now = new Date();
+    const fechaConsulta = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const url = `${getBaseApiUrl()}/DesempenoXPilar?Fechaconsulta=${encodeURIComponent(fechaConsulta)}&Kpihistoricoanio=${ano}&Kpihistoricosemana=${semana}`;
+
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Error al obtener desempeño por pilar (HTTP ${response.status})`);
+    }
+
+    return await response.json();
   }
 };
