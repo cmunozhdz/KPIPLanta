@@ -1,5 +1,5 @@
 const getApiUrl = () => import.meta.env.VITE_APIS_PLANTA || 'https://serviciosrest.polakgrupo.com/kiosco/Apis/Planta';
-const getKpiApiUrl = () => 'https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIAPI/area_kpis';
+const getKpiApiUrl = () => import.meta.env.VITE_API_KPI || 'https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIAPI/area_kpis';
 
 export interface UnidadMedida {
   UnidadMedidaDescripcion: string;

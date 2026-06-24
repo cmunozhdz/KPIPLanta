@@ -1,7 +1,7 @@
 import { KpiHistoricoSemanal } from '../types';
 
-const getBaseApiUrl = () => import.meta.env.VITE_APIS_PLANTA || 'https://serviciosrest.polakgrupo.com/Kiosco/Apis/Planta';
-const getHistoricoApiUrl = () => 'https://serviciosrest.polakgrupo.com/Kiosco/IAPlanta/AreaKPIHistoricoAPI/area_kpihistoricoes';
+const getBaseApiUrl = () => import.meta.env.VITE_APIS_PLANTA || 'https://serviciosrest.polakgrupo.com/kiosco/Apis/Planta';
+const getHistoricoApiUrl = () => import.meta.env.VITE_API_HISTORICO || 'https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIHistoricoAPI/area_kpihistoricoes';
 
 /**
  * Genera una fecha de consulta con décimas de segundo para evitar cache.
@@ -179,5 +179,26 @@ export const kpiHistoricoService = {
       AreaKPIHistoricoDatas: data.AreaKPIHistoricoDatas || [],
       Count: data.Count || 0
     };
+  },
+
+  /**
+   * GET: Obtener calificaciones de la semana (KPIs en Blanco, Observación, Pérdidas Críticas)
+   * Endpoint: /kiosco/Apis/Planta/calificaciones
+   */
+  getCalificaciones: async (
+    ano: string,
+    semana: string
+  ): Promise<{ Contador: number; Calificacion: string }[]> => {
+    const pad = (num: number) => num.toString().padStart(2, '0');
+    const now = new Date();
+    const fechaConsulta = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const url = `${getBaseApiUrl()}/calificaciones?Fechaconsulta=${encodeURIComponent(fechaConsulta)}&ANIO=${ano}&Semanainicial=${semana}&Semanafinal=${semana}`;
+
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Error al obtener calificaciones (HTTP ${response.status})`);
+    }
+
+    return await response.json();
   }
 };
