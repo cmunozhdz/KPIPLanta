@@ -14,7 +14,7 @@ interface KPIManagerProps {
 export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onClose, onSaved }) => {
   const [descripcion, setDescripcion] = useState('');
   const [categoria, setCategoria] = useState('');
-  const [meta, setMeta] = useState<number>(0);
+  const [meta, setMeta] = useState<string>('0');
   const [direccion, setDireccion] = useState<number>(1);
   const [unidaddemedida, setUnidaddemedida] = useState('');
   const [unidadMedidaDesc, setUnidadMedidaDesc] = useState('');
@@ -53,7 +53,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
           if (kpi) {
             setDescripcion(kpi.Descripcion || '');
             setCategoria(kpi.Categoria || '');
-            setMeta(parseFloat(kpi.Meta) || 0);
+            setMeta(kpi.Meta !== undefined && kpi.Meta !== null ? String(kpi.Meta) : '0');
             setDireccion(kpi.Direccion || 1);
             setUnidaddemedida(kpi.Unidaddemedida || '');
             setUnidadMedidaDesc(kpi.UnidadMedidaDescripcion || '');
@@ -119,6 +119,10 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (meta === '') {
+      setError('La Meta no puede estar vacía.');
+      return;
+    }
     if (!isValidUnidad) {
       setError('Debe seleccionar una Unidad de Medida válida de la lista.');
       return;
@@ -225,7 +229,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
                   type="number"
                   step="any"
                   value={meta}
-                  onChange={(e) => setMeta(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => setMeta(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
                   required
                 />

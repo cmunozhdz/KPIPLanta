@@ -193,19 +193,33 @@ export default function App() {
 
   // Estados de filtros
   const [filters, setFilters] = useState(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    let shouldReset = false;
+
     try {
-      const saved = localStorage.getItem('kpi_selected_filters');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.year && parsed.month && parsed.week) {
-          return parsed;
+      const lastInitDate = localStorage.getItem('kpi_last_init_date');
+      if (lastInitDate !== todayStr) {
+        shouldReset = true;
+      }
+    } catch (e) {
+      shouldReset = true;
+    }
+
+    try {
+      if (!shouldReset) {
+        const saved = localStorage.getItem('kpi_selected_filters');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.year && parsed.month && parsed.week) {
+            return parsed;
+          }
         }
       }
     } catch (e) {
       console.warn('Error reading filters from localStorage', e);
     }
 
-    const now = new Date();
     const tempDate = new Date(now.valueOf());
     tempDate.setHours(0, 0, 0, 0);
     tempDate.setDate(tempDate.getDate() + 3 - (tempDate.getDay() + 6) % 7);
@@ -228,6 +242,12 @@ export default function App() {
 
     const monthStr = getMonthFromWeekLocal(yearStr, weekStr);
 
+    try {
+      localStorage.setItem('kpi_last_init_date', todayStr);
+    } catch (e) {
+      console.warn('Error writing kpi_last_init_date to localStorage', e);
+    }
+
     return {
       year: yearStr,
       month: monthStr,
@@ -238,6 +258,8 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('kpi_selected_filters', JSON.stringify(filters));
+      const todayStr = new Date().toISOString().split('T')[0];
+      localStorage.setItem('kpi_last_init_date', todayStr);
     } catch (e) {
       console.warn('Error saving filters to localStorage', e);
     }

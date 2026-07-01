@@ -110,35 +110,52 @@ export const CatalogosKPIService = {
 
   // Insertar un nuevo KPI
   insertKPI: async (kpiData: AreaKPIData): Promise<any> => {
+    const preparedData = {
+      ...kpiData,
+      Meta: kpiData.Meta === 0 ? 0.0001 : kpiData.Meta
+    };
+    const url = getKpiApiUrl();
+    console.log(`[CatalogosKPIService] Invoking insertKPI - URL: ${url}`, { payload: preparedData });
     // POST a https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIAPI/area_kpis
-    const response = await fetch(getKpiApiUrl(), {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ AreaKPIData: kpiData })
+      body: JSON.stringify({ AreaKPIData: preparedData })
     });
+    console.log(`[CatalogosKPIService] Response insertKPI - Status: ${response.status}`);
+    const data = await response.json();
+    console.log(`[CatalogosKPIService] Data insertKPI:`, data);
     if (!response.ok) {
       throw new Error('Error al insertar el KPI');
     }
-    return response.json();
+    return data;
   },
 
   // Actualizar un KPI existente
   updateKPI: async (id: number | string, kpiData: AreaKPIData): Promise<any> => {
+    const preparedData = {
+      ...kpiData,
+      Meta: kpiData.Meta === 0 ? 0.0001 : kpiData.Meta
+    };
     // PUT a https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIAPI/area_kpis/ID
     const url = `${getKpiApiUrl()}/${id}`;
+    console.log(`[CatalogosKPIService] Invoking updateKPI - URL: ${url}`, { payload: preparedData });
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ AreaKPIData: kpiData })
+      body: JSON.stringify({ AreaKPIData: preparedData })
     });
+    console.log(`[CatalogosKPIService] Response updateKPI - Status: ${response.status}`);
+    const data = await response.json();
+    console.log(`[CatalogosKPIService] Data updateKPI:`, data);
     if (!response.ok) {
       throw new Error('Error al actualizar el KPI');
     }
-    return response.json();
+    return data;
   },
 
   // Eliminar un KPI por su ID
