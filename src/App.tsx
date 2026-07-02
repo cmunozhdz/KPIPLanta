@@ -147,7 +147,7 @@ export default function App() {
             return rawKpis
               .filter((rk: any) => rk.Activo !== false)
               .map((rk: any) => ({
-                id: String(rk.ID),
+                id: String(rk.KPI || rk.ID),
                 areaId: rk.AreaId || area.id,
                 cat: (rk.Categoria as SqcdpCat) || 'S',
                 label: rk.Descripcion || 'Sin descripción',

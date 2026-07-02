@@ -23,7 +23,7 @@ kpiHistoricoService.getHistoricoById = async (id: string) => {
     Registro: new Date().toISOString(),
     MetaAsignada: 80,
     KPIHistoricoActivo: true
-  };
+  } as any;
 };
 
 kpiHistoricoService.insertHistorico = async (payload: any) => {

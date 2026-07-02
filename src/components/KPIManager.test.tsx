@@ -59,15 +59,15 @@ async function runTests() {
       const payload = {
         Descripcion: 'Test KPI 0',
         Categoria: 'S',
-        Meta: Number(metaValue),
+        MetaActual: Number(metaValue),
         Direccion: 1,
         Unidaddemedida: 'KG',
         AreaId: 'AreaTest',
-        Activo: true,
+        KPIActivo: true,
       };
 
       try {
-        await CatalogosKPIService.insertKPI(payload);
+        await CatalogosKPIService.insertKPI(payload as any);
         mockOnSavedCalled = true;
       } catch (err: any) {
         errorState = err.message || 'Error';
@@ -79,7 +79,7 @@ async function runTests() {
     // Ejecutamos para meta = "0"
     await testHandleSubmit('0', true);
 
-    if (errorState === null && mockOnSavedCalled && mockInsertKPI.length === 1 && mockInsertKPI[0].Meta === 0) {
+    if (errorState === null && mockOnSavedCalled && mockInsertKPI.length === 1 && mockInsertKPI[0].MetaActual === 0) {
       console.log('✅ TEST 1 PASÓ: Se permitió registrar con meta de 0 correctamente.');
     } else {
       throw new Error(`Fallo Test 1. Error: ${errorState}, SavedCalled: ${mockOnSavedCalled}, Inserted: ${mockInsertKPI.length}`);
@@ -111,9 +111,9 @@ async function runTests() {
       }
 
       const payload = {
-        Meta: Number(metaValue),
+        MetaActual: Number(metaValue),
       };
-      await CatalogosKPIService.insertKPI(payload);
+      await CatalogosKPIService.insertKPI(payload as any);
       mockOnSavedCalled = true;
     };
 
