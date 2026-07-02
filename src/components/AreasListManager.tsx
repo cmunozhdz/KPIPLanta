@@ -74,7 +74,7 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
     setDeleting(true);
     setDeleteError(null);
     try {
-      await CatalogosKPIService.deleteKPI(kpi.ID);
+      await CatalogosKPIService.deleteKPI(kpi.KPI);
       fetchKPIsForArea(areaId);
       setDeleteConfirm(null);
     } catch (err: any) {
@@ -159,9 +159,9 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {(areaKpis[area.id] || [])
                       .map(kpi => (
-                        <div key={kpi.ID} className={cn(
+                        <div key={kpi.KPI} className={cn(
                           "flex items-center justify-between p-4 rounded-2xl group hover:border-blue-300 shadow-sm transition-all border",
-                          kpi.Activo === false 
+                          kpi.KPIActivo === false 
                             ? "bg-slate-50/70 border-dashed border-slate-300 opacity-70" 
                             : "bg-white border-slate-200"
                         )}>
@@ -175,14 +175,14 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
                             <div>
                               <div className="flex items-center gap-2">
                                 <p className="text-[10px] font-black text-slate-800 uppercase tracking-tight">{kpi.Descripcion}</p>
-                                {kpi.Activo === false && (
+                                {kpi.KPIActivo === false && (
                                   <span className="px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-500 text-[8px] font-black uppercase tracking-wider">
                                     Inactivo
                                   </span>
                                 )}
                               </div>
                               <p className="text-[9px] font-bold text-slate-400 uppercase">
-                                Meta: {kpi.Meta} {kpi.Unidaddemedida}
+                                Meta: {kpi.MetaActual} {kpi.Unidaddemedida}
                               </p>
                             </div>
                           </div>
@@ -190,7 +190,10 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setKpiManagerConfig({ areaId: area.id, kpiId: kpi.ID, mode: 'UPD' });
+                                console.log(`[AreasListManager] Editing KPI:`, kpi);
+                                console.log(`[AreasListManager] KPI.KPI:`, kpi.KPI);
+                                console.log(`[AreasListManager] KPI properties:`, Object.keys(kpi));
+                                setKpiManagerConfig({ areaId: area.id, kpiId: kpi.KPI, mode: 'UPD' });
                               }}
                               className="p-2 text-slate-500 hover:text-blue-600 transition-colors"
                             >
@@ -295,7 +298,7 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
                 </div>
                 <div>
                   <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight">{deleteConfirm.kpi.Descripcion}</p>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase">Meta: {deleteConfirm.kpi.Meta} {deleteConfirm.kpi.Unidaddemedida} · ID: {deleteConfirm.kpi.ID}</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Meta: {deleteConfirm.kpi.MetaActual} {deleteConfirm.kpi.Unidaddemedida} · ID: {deleteConfirm.kpi.KPI}</p>
                 </div>
               </div>
 

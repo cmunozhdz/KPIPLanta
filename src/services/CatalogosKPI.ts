@@ -13,14 +13,14 @@ export interface CategoriaSQCDP {
 }
 
 export interface AreaKPIData {
-  ID?: number;
+  KPI?: number;
   Descripcion: string;
   Categoria: string;
-  Meta: number;
+  MetaActual: number;
   Direccion: number;
   Unidaddemedida: string;
   AreaId: string;
-  Activo: boolean;
+  KPIActivo: boolean;
 }
 
 export const CatalogosKPIService = {
@@ -28,25 +28,19 @@ export const CatalogosKPIService = {
   getAreaKPIs: async (areaId: string): Promise<any[]> => {
     const now = new Date();
     const pad = (num: number) => num.toString().padStart(2, '0');
-    const ms = Math.floor(now.getMilliseconds() / 100); // décima de segundo
-    const fechaStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}.${ms}`;
+    const fechaStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
-    // GET a https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIAPI/area_kpis?&Areaid={Area}&Limit=100&Offset=0&consulta="{Fecha}"&AreaKPIActivo=true
-    const url = `${getKpiApiUrl()}?Areaid=${areaId}&Limit=100&Offset=0&consulta=${encodeURIComponent(`"${fechaStr}"`)}`;
+    const url = `${getKpiApiUrl()}?Areaid=${areaId}&Areakpiactivo=true&Limit=100&Offset=0&Consulta=${encodeURIComponent(fechaStr)}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Error al obtener KPIs del área (HTTP ${response.status})`);
     }
     const data = await response.json();
-    // La API puede devolver un array directo o un objeto envolvente
     if (Array.isArray(data)) return data;
-    // Buscar la primera propiedad que sea un array de KPIs
     if (data && typeof data === 'object') {
-      // Intentar propiedades comunes de respuesta
       for (const key of ['AreaKPIDatas', 'AreaKPIs', 'Items', 'Data', 'Results', 'Kpis', 'KPIs']) {
         if (Array.isArray(data[key])) return data[key];
       }
-      // Si el objeto tiene una sola clave que es array, usarla
       const keys = Object.keys(data);
       for (const key of keys) {
         if (Array.isArray(data[key])) return data[key];
@@ -96,33 +90,80 @@ export const CatalogosKPIService = {
   // Obtener un KPI específico por su ID
   getKPIById: async (id: number | string): Promise<any> => {
     const timestamp = new Date().getTime();
-    // GET a https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIAPI/area_kpis/ID
     const url = `${getKpiApiUrl()}/${id}?_=${timestamp}`;
+    console.log(`[CatalogosKPIService] Fetching KPI Data - GET ${url}`);
     const response = await fetch(url, { cache: 'no-store' });
+    console.log(`[CatalogosKPIService] Response Status: ${response.status}`);
     if (!response.ok) {
-      throw new Error(`Error al leer el KPI ${id}`);
+      console.error(`[CatalogosKPIService] Error fetching KPI ${id} - HTTP ${response.status}`);
+      throw new Error(`Error al leer el KPI ${id} (HTTP ${response.status})`);
     }
     const data = await response.json();
-    // La respuesta puede ser el KPI directo o envuelto en AreaKPIResultData
-    if (data && data.AreaKPIResultData) return data.AreaKPIResultData;
-    return data;
+    console.log(`[CatalogosKPIService] RAW KPI Data Retrieved:`, data);
+    console.log(`[CatalogosKPIService] RAW Data Type:`, typeof data, `Is Array: ${Array.isArray(data)}`);
+    
+    let kpiData = null;
+    
+    if (data && typeof data === 'object' && (data.KPI || data.Descripcion || data.MetaActual)) {
+      kpiData = data;
+      console.log(`[CatalogosKPIService] Using data directly (has expected properties):`, kpiData);
+    }
+    else if (Array.isArray(data)) {
+      kpiData = data[0];
+      console.log(`[CatalogosKPIService] Extracted from array:`, kpiData);
+    }
+    else if (data && data.AreaKPIDatas && Array.isArray(data.AreaKPIDatas)) {
+      kpiData = data.AreaKPIDatas[0];
+      console.log(`[CatalogosKPIService] Extracted from AreaKPIDatas:`, kpiData);
+    }
+    else if (data && data.AreaKPIResultData) {
+      kpiData = data.AreaKPIResultData;
+      console.log(`[CatalogosKPIService] Extracted from AreaKPIResultData:`, kpiData);
+    }
+    else if (data && data.AreaKPIs && Array.isArray(data.AreaKPIs)) {
+      kpiData = data.AreaKPIs[0];
+      console.log(`[CatalogosKPIService] Extracted from AreaKPIs:`, kpiData);
+    }
+    else if (data && typeof data === 'object') {
+      for (const key of Object.keys(data)) {
+        if (Array.isArray(data[key]) && data[key].length > 0) {
+          kpiData = data[key][0];
+          console.log(`[CatalogosKPIService] Extracted from ${key}:`, kpiData);
+          break;
+        }
+      }
+    }
+    
+    if (!kpiData) {
+      console.warn(`[CatalogosKPIService] Could not extract KPI data from response:`, data);
+      return data;
+    }
+    
+    console.log(`[CatalogosKPIService] FINAL KPI Data:`, kpiData);
+    return kpiData;
   },
 
   // Insertar un nuevo KPI
   insertKPI: async (kpiData: AreaKPIData): Promise<any> => {
-    const preparedData = {
-      ...kpiData,
-      Meta: kpiData.Meta === 0 ? 0.0001 : kpiData.Meta
+    const metaValue = kpiData.MetaActual === 0 ? 0.0001 : kpiData.MetaActual;
+    const payload = {
+      KPI: 0,
+      Descripcion: kpiData.Descripcion,
+      Categoria: kpiData.Categoria,
+      MetaActual: metaValue,
+      Direccion: kpiData.Direccion,
+      Unidaddemedida: kpiData.Unidaddemedida,
+      KPIActivo: kpiData.KPIActivo,
+      AreaId: kpiData.AreaId
     };
     const url = getKpiApiUrl();
-    console.log(`[CatalogosKPIService] Invoking insertKPI - URL: ${url}`, { payload: preparedData });
-    // POST a https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIAPI/area_kpis
+    console.log(`[CatalogosKPIService] Invoking insertKPI - URL: ${url}`, { payload });
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ AreaKPIData: preparedData })
+      body: JSON.stringify({ AreaKPIData: payload })
     });
     console.log(`[CatalogosKPIService] Response insertKPI - Status: ${response.status}`);
     const data = await response.json();
@@ -135,19 +176,25 @@ export const CatalogosKPIService = {
 
   // Actualizar un KPI existente
   updateKPI: async (id: number | string, kpiData: AreaKPIData): Promise<any> => {
-    const preparedData = {
-      ...kpiData,
-      Meta: kpiData.Meta === 0 ? 0.0001 : kpiData.Meta
+    const metaValue = kpiData.MetaActual === 0 ? 0.0001 : kpiData.MetaActual;
+    const payload = {
+      KPI: Number(id),
+      Descripcion: kpiData.Descripcion,
+      Categoria: kpiData.Categoria,
+      MetaActual: metaValue,
+      Direccion: kpiData.Direccion,
+      Unidaddemedida: kpiData.Unidaddemedida,
+      KPIActivo: kpiData.KPIActivo,
+      AreaId: kpiData.AreaId
     };
-    // PUT a https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIAPI/area_kpis/ID
     const url = `${getKpiApiUrl()}/${id}`;
-    console.log(`[CatalogosKPIService] Invoking updateKPI - URL: ${url}`, { payload: preparedData });
+    console.log(`[CatalogosKPIService] Invoking updateKPI - URL: ${url}`, { payload });
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ AreaKPIData: preparedData })
+      body: JSON.stringify({ AreaKPIData: payload })
     });
     console.log(`[CatalogosKPIService] Response updateKPI - Status: ${response.status}`);
     const data = await response.json();

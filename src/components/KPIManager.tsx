@@ -33,43 +33,71 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initError, setInitError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cargar catálogos iniciales y datos del KPI si es edición
   useEffect(() => {
     const init = async () => {
       setLoading(true);
+      setInitError(null);
       setError(null);
       try {
+        console.log(`[KPIManager] Initializing with mode=${mode}, areaId=${areaId}, kpiId=${kpiId}`);
+        console.log(`[KPIManager] kpiId type: ${typeof kpiId}, value: ${JSON.stringify(kpiId)}`);
+        
         const cats = await CatalogosKPIService.getCategoriasLista();
         setCategorias(cats);
         if (cats.length > 0) {
           setCategoria(cats[0].CategoriaSQCDPID);
         }
 
-        if (mode === 'UPD' && kpiId) {
+        if (mode === 'UPD' && kpiId !== undefined && kpiId !== null && kpiId !== '') {
+          console.log(`[KPIManager] Loading KPI data from API for ID: ${kpiId}`);
           const kpi = await CatalogosKPIService.getKPIById(kpiId);
-          if (kpi) {
-            setDescripcion(kpi.Descripcion || '');
-            setCategoria(kpi.Categoria || '');
-            setMeta(kpi.Meta !== undefined && kpi.Meta !== null ? String(kpi.Meta) : '0');
-            setDireccion(kpi.Direccion || 1);
-            setUnidaddemedida(kpi.Unidaddemedida || '');
-            setUnidadMedidaDesc(kpi.UnidadMedidaDescripcion || '');
-            setUnidadSearch(kpi.UnidadMedidaDescripcion || kpi.Unidaddemedida || '');
-            setActivo(kpi.Activo ?? true);
-            setIsValidUnidad(true); // Se asume válida la guardada originalmente
+          console.log(`[KPIManager] Raw KPI received:`, kpi);
+          console.log(`[KPIManager] KPI properties:`, Object.keys(kpi || {}));
+          
+          if (kpi && Object.keys(kpi).length > 0) {
+            console.log(`[KPIManager] KPI data loaded successfully, populating form...`);
+            
+            const descripcion = kpi.Descripcion || '';
+            const categoria = kpi.Categoria || kpi.categoria || '';
+            const meta = kpi.MetaActual || '0';
+            const direccion = kpi.Direccion || kpi.direccion || 1;
+            const unidad = kpi.Unidaddemedida || kpi.unidaddemedida || '';
+            const unidadDesc = kpi.UnidadMedidaDescripcion || unidad;
+            const activo = kpi.KPIActivo ?? kpi.Activo ?? kpi.activo ?? true;
+            
+            console.log(`[KPIManager] Extracted values:`, { descripcion, categoria, meta, direccion, unidad, unidadDesc, activo });
+            
+            setDescripcion(descripcion);
+            setCategoria(categoria);
+            setMeta(String(meta));
+            setDireccion(Number(direccion));
+            setUnidaddemedida(unidad);
+            setUnidadMedidaDesc(unidadDesc);
+            setUnidadSearch(unidadDesc || unidad);
+            setActivo(activo);
+            setIsValidUnidad(!!unidad);
+            
+            console.log(`[KPIManager] Form population complete`);
+          } else {
+            throw new Error('No se encontraron datos para el KPI especificado.');
           }
+        } else if (mode === 'INS') {
+          console.log(`[KPIManager] Creating new KPI for area: ${areaId}`);
         }
       } catch (err: any) {
-        setError(err.message || 'Error al cargar los datos iniciales.');
+        console.error(`[KPIManager] Initialization error:`, err);
+        setInitError(err.message || 'Error al cargar los datos iniciales.');
       } finally {
         setLoading(false);
       }
     };
     init();
-  }, [mode, kpiId]);
+  }, [mode, kpiId, retryCount]);
 
   // Buscar unidades de medida cuando cambie el texto de búsqueda
   useEffect(() => {
@@ -132,15 +160,14 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
     setError(null);
 
     const payload = {
-      ID: mode === 'UPD' ? Number(kpiId) : undefined,
+      KPI: mode === 'UPD' ? Number(kpiId) : undefined,
       Descripcion: descripcion,
       Categoria: categoria,
-      Meta: Number(meta),
+      MetaActual: Number(meta),
       Direccion: Number(direccion),
       Unidaddemedida: unidaddemedida,
       AreaId: areaId,
-      Activo: activo,
-      AreaKPIActivo: activo
+      KPIActivo: activo
     };
 
     try {
@@ -185,7 +212,47 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
         </div>
 
         {loading ? (
-          <div className="p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">Cargando Catálogos...</div>
+          <div className="p-8 text-center">
+            <div className="text-slate-500 font-bold uppercase tracking-widest text-xs">
+              {mode === 'UPD' ? 'Cargando datos del KPI...' : 'Cargando catálogos...'}
+            </div>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-2">
+              {mode === 'UPD' ? `GET /area_kpis/${kpiId}` : 'Por favor espere...'}
+            </p>
+          </div>
+        ) : initError ? (
+          <div className="p-8 flex flex-col items-center text-center space-y-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full" />
+              <div className="relative bg-gradient-to-tr from-red-500 to-rose-600 p-5 rounded-3xl text-white shadow-lg shadow-red-500/30">
+                <AlertCircle size={32} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-lg font-black text-slate-800 tracking-tight">
+                No se pudo cargar la información
+              </h4>
+              <p className="text-xs font-bold text-slate-400 max-w-xs leading-relaxed">
+                {initError}
+              </p>
+            </div>
+            <div className="flex gap-3 w-full pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-4 rounded-2xl transition-all uppercase text-[10px] tracking-widest"
+              >
+                Cerrar
+              </button>
+              <button
+                type="button"
+                onClick={() => setRetryCount(prev => prev + 1)}
+                className="flex-1 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white font-black py-4 rounded-2xl shadow-lg shadow-red-500/20 transition-all uppercase text-[10px] tracking-widest"
+              >
+                Reintentar
+              </button>
+            </div>
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
             {error && (

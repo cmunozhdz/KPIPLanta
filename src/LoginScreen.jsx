@@ -226,16 +226,55 @@ export default function LoginScreen({ onLoginSuccess }) {
             <form onSubmit={handleFormSubmit} className="space-y-4">
 
               {/* Input Correo */}
-
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1 flex items-center gap-1.5">
+                  <Mail size={12} className="text-slate-400" />
+                  Correo Corporativo
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ejemplo@polakgrupo.com"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
+                  required
+                />
+              </div>
 
               {/* Input Contraseña */}
-
-
-
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1 flex items-center gap-1.5">
+                  <Lock size={12} className="text-slate-400" />
+                  Contraseña
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all pr-12"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
 
               {/* Botones de acción */}
               <div className="pt-2 space-y-3">
-
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-4 bg-slate-800 hover:bg-slate-900 text-white text-xs font-black uppercase tracking-widest rounded-full shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                >
+                  {isLoading ? 'Iniciando Sesión...' : 'Ingresar'}
+                </button>
 
                 <div className="relative flex items-center justify-center my-4">
                   <div className="border-t border-slate-200 w-full"></div>
