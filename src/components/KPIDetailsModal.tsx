@@ -55,9 +55,24 @@ export const KPIDetailsModal: React.FC<KPIDetailsModalProps> = ({
       setError(null);
       try {
         const response = await kpiHistoricoService.getKpiHistoricoRango(Number(kpi.id), ano);
-        // Sort history by Registry date or Ano/Mes/Semana ascending for the chart
+        const parseNum = (val: any) => {
+          if (typeof val === 'number') return val;
+          if (typeof val === 'string') {
+            const match = val.match(/\d+/);
+            return match ? parseInt(match[0], 10) : 0;
+          }
+          return 0;
+        };
+
         const sorted = [...response.AreaKPIHistoricoDatas].sort((a, b) => {
-          return new Date(a.Registro).getTime() - new Date(b.Registro).getTime();
+          const anoA = parseNum(a.Ano);
+          const anoB = parseNum(b.Ano);
+          const semA = parseNum(a.Semana);
+          const semB = parseNum(b.Semana);
+          if (anoA !== anoB) {
+            return anoA - anoB;
+          }
+          return semA - semB;
         });
         setHistoryList(sorted);
         setCount(response.Count);
@@ -95,12 +110,16 @@ export const KPIDetailsModal: React.FC<KPIDetailsModalProps> = ({
   }, [historyList, kpi.dir, kpi.target]);
 
   const chartData = useMemo(() => {
-    return historyList.map(h => ({
-      name: `W${h.Semana}`,
-      value: parseFloat(h.Valor) || 0,
-      target: parseFloat(h.MetaAsignada) || parseFloat(h.MetaActual) || kpi.target,
-      full: `W${h.Semana} / ${h.Ano}`
-    }));
+    return historyList.map(h => {
+      const match = String(h.Semana).match(/\d+/);
+      const semNum = match ? match[0] : h.Semana;
+      return {
+        name: `w${semNum}`,
+        value: parseFloat(h.Valor) || 0,
+        target: parseFloat(h.MetaAsignada) || parseFloat(h.MetaActual) || kpi.target,
+        full: `w${semNum} / ${h.Ano}`
+      };
+    });
   }, [historyList, kpi.target]);
 
   const handleDownloadCSV = () => {
