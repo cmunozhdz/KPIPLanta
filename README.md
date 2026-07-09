@@ -65,3 +65,13 @@ scp  /workspaces/TableroPlanta/dist/readme.txt ctessh@192.168.2.220:"e:/Aplicaci
     scp -r /workspaces/TableroPlanta/dist/* ctessh@192.168.2.220:"e:/Aplicaciones/kpiplanta/"
 
 
+### Implementacion de agntes para pruebas unitarias
+
+
+
+#### Para ejecutar las pruebas unitarias de TypeScript/React:
+
+    Cada vez que abras un componente nuevo, invoca al agente diciendo: 
+    "Genera la estrategia de pruebas para este componente".
+
+El agente te devolverá primero el archivo .test-report.md para validar los escenarios antes de escribir una sola línea del .test.tsx.

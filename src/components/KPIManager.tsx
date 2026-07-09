@@ -263,8 +263,9 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
             )}
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Descripción del KPI</label>
+              <label htmlFor="kpiDescripcion" className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Descripción del KPI</label>
               <input
+                id="kpiDescripcion"
                 type="text"
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
@@ -275,8 +276,9 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Categoría SQCDP</label>
+                <label htmlFor="kpiCategoria" className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Categoría SQCDP</label>
                 <select
+                  id="kpiCategoria"
                   value={categoria}
                   onChange={(e) => setCategoria(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all appearance-none"
@@ -291,8 +293,9 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Meta</label>
+                <label htmlFor="kpiMeta" className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Meta</label>
                 <input
+                  id="kpiMeta"
                   type="number"
                   step="any"
                   value={meta}
@@ -306,9 +309,10 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
             <div className="grid grid-cols-2 gap-4 relative">
               {/* Unidad de Medida Autocomplete/Dropdown */}
               <div className="space-y-2 relative">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Unidad de Medida</label>
+                <label htmlFor="kpiUnidadSearch" className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Unidad de Medida</label>
                 <div className="relative">
                   <input
+                    id="kpiUnidadSearch"
                     type="text"
                     value={unidadSearch}
                     onChange={(e) => {
@@ -341,8 +345,9 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Dirección de Mejora</label>
+                <label htmlFor="kpiDireccion" className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Dirección de Mejora</label>
                 <select
+                  id="kpiDireccion"
                   value={direccion}
                   onChange={(e) => setDireccion(Number(e.target.value))}
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all appearance-none"
