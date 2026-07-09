@@ -747,6 +747,7 @@ export default function App() {
             ano={parseInt(filters.year, 10)}
             areas={areas}
             onClose={() => setViewingKpiDetails(null)}
+            isAdmin={role === 'admin'}
           />
         )}
       </AnimatePresence>

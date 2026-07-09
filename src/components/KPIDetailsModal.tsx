@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Factory, Target, Loader2, AlertTriangle, Download } from 'lucide-react';
 import {
   LineChart,
@@ -20,6 +20,7 @@ interface KPIDetailsModalProps {
   ano: number;
   areas: Area[];
   onClose: () => void;
+  isAdmin?: boolean;
 }
 
 const StatusBadge = ({ status }: { status: Status }) => {
@@ -42,50 +43,80 @@ export const KPIDetailsModal: React.FC<KPIDetailsModalProps> = ({
   kpi,
   ano,
   areas,
-  onClose
+  onClose,
+  isAdmin = false
 }) => {
   const [historyList, setHistoryList] = useState<KpiHistoricoSemanal[]>([]);
   const [count, setCount] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [deletingRecord, setDeletingRecord] = useState<KpiHistoricoSemanal | null>(null);
+  const [deletingLoading, setDeletingLoading] = useState<boolean>(false);
+  const [toast, setToast] = useState<{ message: string; type?: 'error' | 'info' } | null>(null);
+
   useEffect(() => {
-    const fetchHistory = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const response = await kpiHistoricoService.getKpiHistoricoRango(Number(kpi.id), ano);
-        const parseNum = (val: any) => {
-          if (typeof val === 'number') return val;
-          if (typeof val === 'string') {
-            const match = val.match(/\d+/);
-            return match ? parseInt(match[0], 10) : 0;
-          }
-          return 0;
-        };
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
-        const sorted = [...response.AreaKPIHistoricoDatas].sort((a, b) => {
-          const anoA = parseNum(a.Ano);
-          const anoB = parseNum(b.Ano);
-          const semA = parseNum(a.Semana);
-          const semB = parseNum(b.Semana);
-          if (anoA !== anoB) {
-            return anoA - anoB;
-          }
-          return semA - semB;
-        });
-        setHistoryList(sorted);
-        setCount(response.Count);
-      } catch (err: any) {
-        console.error('Error fetching KPI history:', err);
-        setError(err.message || 'Error al obtener la información histórica de la API.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchHistory = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await kpiHistoricoService.getKpiHistoricoRango(Number(kpi.id), ano);
+      const parseNum = (val: any) => {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') {
+          const match = val.match(/\d+/);
+          return match ? parseInt(match[0], 10) : 0;
+        }
+        return 0;
+      };
 
-    fetchHistory();
+      const sorted = [...response.AreaKPIHistoricoDatas].sort((a, b) => {
+        const anoA = parseNum(a.Ano);
+        const anoB = parseNum(b.Ano);
+        const semA = parseNum(a.Semana);
+        const semB = parseNum(b.Semana);
+        if (anoA !== anoB) {
+          return anoA - anoB;
+        }
+        return semA - semB;
+      });
+      setHistoryList(sorted);
+      setCount(response.Count);
+    } catch (err: any) {
+      console.error('Error fetching KPI history:', err);
+      setError(err.message || 'Error al obtener la información histórica de la API.');
+    } finally {
+      setLoading(false);
+    }
   }, [kpi.id, ano]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const handleDelete = async (historicoId: string) => {
+    setDeletingLoading(true);
+    try {
+      await kpiHistoricoService.deleteHistorico(historicoId);
+      setToast({ message: 'Los datos han sido eliminados.', type: 'info' });
+      setDeletingRecord(null);
+      await fetchHistory();
+    } catch (err: any) {
+      console.error('Error deleting record:', err);
+      setToast({ message: err.message || 'Error al eliminar el registro histórico.', type: 'error' });
+    } finally {
+      setDeletingLoading(false);
+    }
+  };
+
 
   const requiresAcr = useMemo(() => {
     if (historyList.length < 3) return false;
@@ -334,6 +365,9 @@ export const KPIDetailsModal: React.FC<KPIDetailsModalProps> = ({
                         <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                         <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Comentario / Causa Raíz</th>
                         <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Actualizado</th>
+                        {isAdmin && (
+                          <th className="px-6 py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">Acciones</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -375,12 +409,23 @@ export const KPIDetailsModal: React.FC<KPIDetailsModalProps> = ({
                                 })}
                               </p>
                             </td>
+                            {isAdmin && (
+                              <td className="px-6 py-5 text-center">
+                                <button
+                                  onClick={() => setDeletingRecord(h)}
+                                  title="Eliminar registro"
+                                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all active:scale-90 cursor-pointer inline-flex items-center justify-center"
+                                >
+                                  <i className="bi bi-trash text-base"></i>
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
                       {historyList.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="px-6 py-12 text-center text-slate-300 font-black uppercase text-xs tracking-widest">No hay registros históricos</td>
+                          <td colSpan={isAdmin ? 6 : 5} className="px-6 py-12 text-center text-slate-300 font-black uppercase text-xs tracking-widest">No hay registros históricos</td>
                         </tr>
                       )}
                     </tbody>
@@ -391,6 +436,85 @@ export const KPIDetailsModal: React.FC<KPIDetailsModalProps> = ({
           )}
         </div>
       </motion.div>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {deletingRecord && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeletingRecord(null)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden border border-slate-200 z-10"
+            >
+              <div className="p-8">
+                <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 mb-5 border border-red-100">
+                  <i className="bi bi-exclamation-triangle text-xl"></i>
+                </div>
+                <h3 className="text-lg font-black text-slate-800 tracking-tight">Confirmar Eliminación</h3>
+                <p className="text-[12px] text-slate-500 mt-2 font-medium leading-relaxed">
+                  ¿Estás seguro de que deseas eliminar el registro del periodo <strong>Semana {deletingRecord.Semana} ({deletingRecord.Ano})</strong> con valor <strong>{deletingRecord.Valor} {kpi.unit}</strong>? Esta acción no se puede deshacer.
+                </p>
+                <div className="mt-6 flex gap-3 justify-end">
+                  <button
+                    onClick={() => setDeletingRecord(null)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition-colors text-xs uppercase tracking-wider cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleDelete(deletingRecord.Historico)}
+                    className="px-4 py-2.5 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors text-xs uppercase tracking-wider flex items-center gap-2 cursor-pointer"
+                    disabled={deletingLoading}
+                  >
+                    {deletingLoading ? (
+                      <>
+                        <Loader2 className="animate-spin" size={12} /> Eliminando...
+                      </>
+                    ) : (
+                      'Confirmar'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Alert */}
+      <AnimatePresence>
+        {toast && (
+          <div className="fixed right-6 bottom-6 z-70">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className={`px-5 py-3.5 rounded-2xl shadow-2xl text-white font-bold text-xs uppercase tracking-wider flex items-center gap-3 border ${
+                toast.type === 'error'
+                  ? 'bg-red-600 border-red-500 shadow-red-200'
+                  : 'bg-slate-900 border-slate-800 shadow-slate-200'
+              }`}
+            >
+              <span>{toast.message}</span>
+              <button
+                onClick={() => setToast(null)}
+                className="p-1 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
+

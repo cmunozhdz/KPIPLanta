@@ -249,5 +249,29 @@ export const kpiHistoricoService = {
     }
 
     return await response.json();
+  },
+
+  /**
+   * DELETE: Eliminar un registro de KPI semanal.
+   * Endpoint: /IAPlanta/AreaKPIHistoricoAPI/area_kpihistoricoes/{Historico}
+   */
+  deleteHistorico: async (historicoId: string): Promise<{ message: string }> => {
+    const url = `${getHistoricoApiUrl()}/${encodeURIComponent(historicoId)}`;
+    const response = await fetch(url, {
+      method: 'DELETE'
+    });
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const description = data?.Messages?.[0]?.Description
+        || 'Error al eliminar el KPI semanal.';
+      throw new Error(description);
+    }
+
+    return {
+      message: data?.Messages?.[0]?.Description || 'Los datos han sido eliminados.'
+    };
   }
 };
+
