@@ -145,16 +145,16 @@ export default function App() {
             }
             // Mapeamos el formato de la API al formato Kpi interno utilizado por el Dashboard (solo KPIs activos)
             return rawKpis
-              .filter((rk: any) => rk.Activo !== false)
+              .filter((rk: any) => rk.Activo !== false && rk.KPIActivo !== false && rk.activo !== false)
               .map((rk: any) => ({
                 id: String(rk.KPI || rk.ID),
                 areaId: rk.AreaId || area.id,
                 cat: (rk.Categoria as SqcdpCat) || 'S',
                 label: rk.Descripcion || 'Sin descripción',
-                target: parseFloat(rk.Meta) || 0,
+                target: parseFloat(rk.MetaActual ?? rk.Meta) || 0,
                 dir: rk.Direccion === 2 ? -1 : 1,
                 unit: rk.Unidaddemedida || '',
-                is_visible_top: rk.Activo ?? true,
+                is_visible_top: rk.Activo ?? rk.KPIActivo ?? rk.activo ?? true,
                 history: [] // La API de histórico no está especificada en esta historia
               }));
           } catch (err) {

@@ -30,7 +30,7 @@ export const CatalogosKPIService = {
     const pad = (num: number) => num.toString().padStart(2, '0');
     const fechaStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
-    const url = `${getKpiApiUrl()}?Areaid=${areaId}&Areakpiactivo=true&Limit=100&Offset=0&Consulta=${encodeURIComponent(fechaStr)}`;
+    const url = `${getKpiApiUrl()}?Areaid=${areaId}&Limit=100&Offset=0&Consulta=${encodeURIComponent(fechaStr)}`;
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Error al obtener KPIs del área (HTTP ${response.status})`);
