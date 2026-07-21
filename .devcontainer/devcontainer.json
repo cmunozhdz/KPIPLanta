@@ -23,8 +23,8 @@
 		// Esto asegura que el volumen nombrado absorba por completo los node_modules
 		"source=tablero-planta-node-modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
 	],
-	// Cambiado a updateContentCommand para evitar reinstalaciones innecesarias
-	"updateContentCommand": "npm install",
+	// Aseguramos que el usuario node sea dueño del volumen antes de instalar
+	"updateContentCommand": "sudo chown -R node:node node_modules && npm install",
 	"customizations": {
 		"vscode": {
 			"extensions": [
