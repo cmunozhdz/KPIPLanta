@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import logoPolak from './assets/logoGP.png'; // Importación dinámica
+import logoPolak from './assets/logogp.png'; // Importación dinámica
 export function Header() {
   return (
     <header>
