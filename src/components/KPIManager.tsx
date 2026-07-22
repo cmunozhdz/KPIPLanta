@@ -18,6 +18,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
   const [direccion, setDireccion] = useState<number>(1);
   const [unidaddemedida, setUnidaddemedida] = useState('');
   const [unidadMedidaDesc, setUnidadMedidaDesc] = useState('');
+  const [periodicidad, setPeriodicidad] = useState<'S' | 'M'>('M');
   const [activo, setActivo] = useState(true);
 
   // Catálogos cargados dinámicamente
@@ -68,9 +69,10 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
             const direccion = kpi.Direccion || kpi.direccion || 1;
             const unidad = kpi.Unidaddemedida || kpi.unidaddemedida || '';
             const unidadDesc = kpi.UnidadMedidaDescripcion || unidad;
+            const periodicidadVal = (kpi.Periodicidad || kpi.periodicidad || 'M').toUpperCase();
             const activo = kpi.KPIActivo ?? kpi.Activo ?? kpi.activo ?? true;
             
-            console.log(`[KPIManager] Extracted values:`, { descripcion, categoria, meta, direccion, unidad, unidadDesc, activo });
+            console.log(`[KPIManager] Extracted values:`, { descripcion, categoria, meta, direccion, unidad, unidadDesc, periodicidad: periodicidadVal, activo });
             
             setDescripcion(descripcion);
             setCategoria(categoria);
@@ -79,6 +81,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
             setUnidaddemedida(unidad);
             setUnidadMedidaDesc(unidadDesc);
             setUnidadSearch(unidadDesc || unidad);
+            setPeriodicidad(periodicidadVal === 'S' ? 'S' : 'M');
             setActivo(activo);
             setIsValidUnidad(!!unidad);
             
@@ -155,6 +158,10 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
       setError('Debe seleccionar una Unidad de Medida válida de la lista.');
       return;
     }
+    if (!periodicidad) {
+      setError('Debe seleccionar una Periodicidad válida.');
+      return;
+    }
     
     setSaving(true);
     setError(null);
@@ -166,6 +173,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
       MetaActual: Number(meta),
       Direccion: Number(direccion),
       Unidaddemedida: unidaddemedida,
+      Periodicidad: periodicidad,
       AreaId: areaId,
       KPIActivo: activo
     };
@@ -362,15 +370,33 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <input
-                id="kpiActivo"
-                type="checkbox"
-                checked={activo}
-                onChange={(e) => setActivo(e.target.checked)}
-                className="w-5 h-5 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="kpiActivo" className="text-sm font-bold text-slate-700 select-none">KPI Activo</label>
+            <div className="grid grid-cols-2 gap-4 items-center">
+              <div className="space-y-2">
+                <label htmlFor="kpiPeriodicidad" className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">
+                  Periodicidad <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="kpiPeriodicidad"
+                  value={periodicidad}
+                  onChange={(e) => setPeriodicidad(e.target.value as 'S' | 'M')}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                  required
+                >
+                  <option value="S">Semanal</option>
+                  <option value="M">Mensual</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-3 pt-6">
+                <input
+                  id="kpiActivo"
+                  type="checkbox"
+                  checked={activo}
+                  onChange={(e) => setActivo(e.target.checked)}
+                  className="w-5 h-5 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                />
+                <label htmlFor="kpiActivo" className="text-sm font-bold text-slate-700 select-none cursor-pointer">KPI Activo</label>
+              </div>
             </div>
 
             <button

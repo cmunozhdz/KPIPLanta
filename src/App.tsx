@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
+import logoQuimico from './assets/logoquimico.png';
 import {
   Shield,
   CheckCircle,
@@ -533,13 +534,19 @@ export default function App() {
       <header className="max-w-7xl mx-auto bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8">
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-200">
-                <BarChart3 className="text-white" size={24} />
-              </div>
+            <div 
+              className="flex items-center gap-3 mb-1 cursor-pointer group"
+              onClick={() => setView('overview')}
+              title="Ir al inicio"
+            >
+              <img 
+                src={logoQuimico} 
+                alt="Logo Químico" 
+                className="min-w-[16px] min-h-[16px] max-w-[65px] max-h-[65px] w-auto h-auto object-contain transition-transform group-hover:scale-105"
+              />
               <h1 className="text-2xl font-black text-slate-800 tracking-tight">KPI Planta Polak</h1>
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-11">Pillar Management System</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Pillar Management System</p>
           </div>
 
           <div className="flex flex-wrap gap-3 items-center w-full xl:w-auto">
