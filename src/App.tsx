@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import logoQuimico from './assets/logoquimico.png';
+import logoOEE from './assets/logoOEE.png';
 import {
   Shield,
   CheckCircle,
@@ -540,8 +540,8 @@ export default function App() {
               title="Ir al inicio"
             >
               <img 
-                src={logoQuimico} 
-                alt="Logo Químico" 
+                src={logoOEE} 
+                alt="Logo OEE" 
                 className="min-w-[16px] min-h-[16px] max-w-[65px] max-h-[65px] w-auto h-auto object-contain transition-transform group-hover:scale-105"
               />
               <h1 className="text-2xl font-black text-slate-800 tracking-tight">KPI Planta Polak</h1>

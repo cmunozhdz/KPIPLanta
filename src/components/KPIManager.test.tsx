@@ -312,6 +312,7 @@ describe('KPIManager - Componente y Pruebas de Robustez (Fail-over)', () => {
       MetaActual: 12.5,
       Direccion: 2,
       Unidaddemedida: 'KG',
+      Periodicidad: 'M',
       AreaId: 'Area-Test',
       KPIActivo: true
     });
@@ -363,6 +364,7 @@ describe('KPIManager - Componente y Pruebas de Robustez (Fail-over)', () => {
       MetaActual: 100,
       Direccion: 1,
       Unidaddemedida: 'KG',
+      Periodicidad: 'M',
       AreaId: 'Area-Test',
       KPIActivo: true
     });

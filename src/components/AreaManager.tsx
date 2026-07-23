@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { X, Save } from 'lucide-react';
-import { areaService } from '../services/areaService';
+import { X, Save, AlertCircle, AlertTriangle } from 'lucide-react';
+import { areaService, ExOpPermiso } from '../services/areaService';
 
 interface AreaManagerProps {
   areaId?: string;
@@ -22,6 +22,28 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
   const [loading, setLoading] = useState(mode === 'UPD');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Estados para la lista desplegable de permisos (ExOP)
+  const [permisosList, setPermisosList] = useState<ExOpPermiso[]>([]);
+  const [loadingPermisos, setLoadingPermisos] = useState(true);
+  const [permisosApiError, setPermisosApiError] = useState<string | null>(null);
+
+  // Carga del catálogo de permisos desde la API
+  useEffect(() => {
+    const fetchPermisos = async () => {
+      setLoadingPermisos(true);
+      setPermisosApiError(null);
+      try {
+        const list = await areaService.getExOpPermisos();
+        setPermisosList(list);
+      } catch (err: any) {
+        setPermisosApiError(err?.message || 'Error al obtener la lista de permisos.');
+      } finally {
+        setLoadingPermisos(false);
+      }
+    };
+    fetchPermisos();
+  }, []);
 
   useEffect(() => {
     const fetchArea = async () => {
@@ -46,8 +68,21 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
     fetchArea();
   }, [areaId, mode]);
 
+  // Determinar si el permiso actualmente guardado en BD no es válido en el catálogo
+  const isInvalidValue = Boolean(
+    !loadingPermisos &&
+    !permisosApiError &&
+    formData.AreaPermiso &&
+    permisosList.length > 0 &&
+    !permisosList.some(p => p.IPermisosId === formData.AreaPermiso)
+  );
+
+  const isSaveDisabled = saving || loadingPermisos || !!permisosApiError || isInvalidValue;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaveDisabled) return;
+
     setSaving(true);
     setError(null);
     try {
@@ -125,15 +160,55 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Permiso</label>
-                <input 
+                <select 
                   name="AreaPermiso" 
-                  type="text" 
                   value={formData.AreaPermiso}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all" 
-                />
+                  disabled={loadingPermisos || !!permisosApiError}
+                  className={`w-full bg-slate-50 border ${isInvalidValue ? 'border-rose-400 focus:ring-rose-100 focus:border-rose-500 text-rose-700' : 'border-slate-200 focus:ring-blue-100 focus:border-blue-500 text-slate-800'} rounded-2xl px-5 py-4 text-sm font-black outline-none transition-all disabled:opacity-60 disabled:bg-slate-100 cursor-pointer disabled:cursor-not-allowed`}
+                >
+                  <option value="">
+                    {loadingPermisos ? 'Cargando permisos...' : '-- Seleccione un permiso --'}
+                  </option>
+                  {isInvalidValue && (
+                    <option value={formData.AreaPermiso} disabled>
+                      ⚠️ {formData.AreaPermiso} (Valor no válido en BD)
+                    </option>
+                  )}
+                  {permisosList.map(permiso => (
+                    <option key={permiso.IPermisosId} value={permiso.IPermisosId}>
+                      {permiso.IPermisosDescripcion}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
+
+            {permisosApiError && (
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-red-50 border border-red-200/80 text-red-800 text-xs shadow-sm">
+                <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                <div>
+                  <span className="block font-black text-red-900 text-sm">Error en Servicio de Permisos</span>
+                  <span className="font-medium text-red-700 mt-0.5 block">{permisosApiError}</span>
+                  <span className="text-[11px] text-red-500 font-semibold mt-1 block">El control ha sido desactivado. No es posible realizar cambios hasta restablecer la conexión.</span>
+                </div>
+              </div>
+            )}
+
+            {isInvalidValue && !permisosApiError && (
+              <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs shadow-sm">
+                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <div>
+                  <span className="block font-black text-amber-900 text-sm">Valor de Permiso No Válido</span>
+                  <span className="font-normal text-amber-800 mt-0.5 block">
+                    El permiso almacenado en la base de datos (<strong>"{formData.AreaPermiso}"</strong>) no existe en la lista oficial de permisos ExOP.
+                  </span>
+                  <span className="font-bold text-amber-900 mt-1 block">
+                    Para poder guardar los cambios, debes seleccionar un permiso válido de la lista desplegable.
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Descripción</label>
@@ -184,8 +259,8 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
 
             <button 
               type="submit" 
-              disabled={saving}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-100 transition-all active:scale-[0.98] uppercase text-[11px] tracking-widest disabled:opacity-70"
+              disabled={isSaveDisabled}
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-100 transition-all active:scale-[0.98] uppercase text-[11px] tracking-widest disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
             >
               <Save size={18} />
               {saving ? 'Guardando...' : (mode === 'UPD' ? 'Guardar Cambios' : 'Crear Área')}
@@ -196,3 +271,4 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
     </div>
   );
 };
+
