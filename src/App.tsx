@@ -662,6 +662,7 @@ export default function App() {
                   key="master"
                   areas={areas}
                   role={role}
+                  userEmail={user.email}
                   onAreasUpdated={fetchAreas}
                 />
               ) : (

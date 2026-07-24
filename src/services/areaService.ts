@@ -1,6 +1,7 @@
 const getApiUrl = () => import.meta.env.VITE_APIS_PLANTA || 'https://serviciosrest.polakgrupo.com/kiosco/Apis/Planta';
 const getExOpApiUrl = () => import.meta.env.VITE_API_EXOP_URL || 'https://serviciosrest.polakgrupo.com/kiosco/Apis/IntranetSeguridad/Modulo/ExOP';
-const getAdminApiUrl = () => import.meta.env.VITE_API_AREAS_ADMIN || 'https://serviciosrest.polakgrupo.com/Kiosco/Apis/Planta/AreasLista/Admin';
+const getAdminApiUrl = () => import.meta.env.VITE_API_AREAS_ADMIN || '/api/Kiosco/Apis/Planta/AreasLista/Admin';
+
 
 const buildFechaConsultaAdmin = (): string => {
   const now = new Date();

@@ -1,27 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Area, Kpi } from '../types';
 import { SQCDP_CATEGORIES } from '../constants/data';
-import { Edit3, Trash2, Plus, Factory, ChevronDown, ChevronUp, AlertTriangle, X, Loader2 } from 'lucide-react';
+import { Edit3, Trash2, Plus, Factory, ChevronDown, ChevronUp, AlertTriangle, X, Loader2, RefreshCw, ShieldAlert } from 'lucide-react';
 import { AreaManager } from './AreaManager';
 import { KPIManager } from './KPIManager';
 import { CatalogosKPIService } from '../services/CatalogosKPI';
+import { areaService } from '../services/areaService';
 import { cn } from '../lib/utils';
 
 interface AreasListManagerProps {
   areas: Area[];
   role: string;
+  userEmail?: string;
   onAreasUpdated: () => void;
 }
 
 export const AreasListManager: React.FC<AreasListManagerProps> = ({
   areas,
   role,
+  userEmail,
   onAreasUpdated
 }) => {
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
   const [isCreatingArea, setIsCreatingArea] = useState(false);
   const [expandedAreaId, setExpandedAreaId] = useState<string | null>(null);
   
+  // Estado para áreas filtradas del administrador
+  const [adminAreas, setAdminAreas] = useState<Area[]>([]);
+  const [isLoadingAdminAreas, setIsLoadingAdminAreas] = useState<boolean>(false);
+  const [adminAreasError, setAdminAreasError] = useState<string | null>(null);
+
   // KPIs locales cargados dinámicamente por área expandida
   const [areaKpis, setAreaKpis] = useState<Record<string, any[]>>({});
   const [loadingKpis, setLoadingKpis] = useState<Record<string, boolean>>({});
@@ -40,6 +48,39 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const fetchAdminAreas = useCallback(async () => {
+    if (!userEmail) {
+      setAdminAreas(areas);
+      return;
+    }
+    setIsLoadingAdminAreas(true);
+    setAdminAreasError(null);
+    try {
+      const res = await areaService.getAdminAreas(userEmail);
+      if (res && Array.isArray(res.Areas)) {
+        const mapped: Area[] = res.Areas.map((item: any) => ({
+          id: item.AreaId,
+          name: item.AreaDescripcion,
+          icon: item.AreaIcon || 'Factory',
+          color: item.AreaColor || 'slate'
+        }));
+        setAdminAreas(mapped);
+      } else {
+        setAdminAreas([]);
+      }
+    } catch (err: any) {
+      console.error('Error cargando áreas de administrador:', err);
+      setAdminAreasError(err?.message || 'No es posible consultar las áreas asignadas a tu perfil de administrador en este momento.');
+      setAdminAreas([]);
+    } finally {
+      setIsLoadingAdminAreas(false);
+    }
+  }, [userEmail, areas]);
+
+  useEffect(() => {
+    fetchAdminAreas();
+  }, [fetchAdminAreas]);
 
   const fetchKPIsForArea = async (areaId: string) => {
     setLoadingKpis(prev => ({ ...prev, [areaId]: true }));
@@ -84,6 +125,8 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
     }
   };
 
+  const displayAreas = userEmail ? adminAreas : areas;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
@@ -94,20 +137,70 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
         {role === 'admin' && (
           <button
             onClick={() => setIsCreatingArea(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-all"
+            className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95"
           >
             <Plus size={18} /> Nueva Área
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        {areas.map(area => (
-          <div key={area.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative transition-all">
-            <div 
-              className="flex justify-between items-start p-8 cursor-pointer hover:bg-slate-50 transition-colors"
-              onClick={() => toggleArea(area.id)}
+      {/* Pantalla / Notificación Premium de Error */}
+      {adminAreasError ? (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-rose-950 to-slate-950 p-8 sm:p-10 border border-rose-500/30 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 duration-300">
+          <div className="absolute -top-24 -right-24 w-72 h-72 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 text-center md:text-left">
+            <div className="p-4 bg-gradient-to-br from-rose-500 to-red-600 rounded-2xl text-white shadow-xl shadow-rose-900/50 flex-shrink-0">
+              <ShieldAlert size={36} />
+            </div>
+            
+            <div className="flex-1 space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[10px] font-black uppercase tracking-widest">
+                <AlertTriangle size={12} className="text-rose-400" />
+                Error de Acceso a Servicio de Áreas
+              </div>
+              <h3 className="text-2xl font-black text-white uppercase tracking-tight">
+                No se pudieron consultar las áreas de administrador
+              </h3>
+              <p className="text-slate-300 text-xs font-medium leading-relaxed max-w-2xl">
+                {adminAreasError}
+              </p>
+              <div className="pt-2 text-[10px] font-mono text-rose-300/70">
+                Usuario consultado: <span className="font-bold text-rose-200">{userEmail || 'Sin usuario'}</span>
+              </div>
+            </div>
+
+            <button
+              onClick={fetchAdminAreas}
+              className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black px-6 py-3.5 rounded-2xl text-[10px] uppercase tracking-widest shadow-xl shadow-rose-950 transition-all active:scale-95 flex-shrink-0"
             >
+              <RefreshCw size={16} /> Reintentar Conexión
+            </button>
+          </div>
+        </div>
+      ) : isLoadingAdminAreas ? (
+        <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center shadow-sm">
+          <Loader2 size={36} className="animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-slate-600 font-black text-xs uppercase tracking-widest">Consultando áreas asignadas a tu perfil de administrador...</p>
+        </div>
+      ) : displayAreas.length === 0 ? (
+        <div className="bg-white rounded-3xl p-12 border border-dashed border-slate-300 text-center shadow-sm">
+          <Factory size={40} className="text-slate-400 mx-auto mb-3" />
+          <h3 className="text-lg font-black text-slate-700 uppercase tracking-tight">Sin Áreas Asignadas</h3>
+          <p className="text-slate-500 text-xs font-medium max-w-md mx-auto mt-1">
+            No se encontraron áreas asignadas a tu perfil de usuario administrador ({userEmail}).
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {displayAreas.map(area => (
+            <div key={area.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden relative transition-all">
+              <div 
+                className="flex justify-between items-start p-8 cursor-pointer hover:bg-slate-50 transition-colors"
+                onClick={() => toggleArea(area.id)}
+              >
+
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-slate-100 rounded-2xl flex items-center justify-center w-12 h-12">
                   <i className={cn(area.icon || "fas fa-industry", "text-slate-700 text-2xl")}></i>
@@ -223,6 +316,8 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
           </div>
         ))}
       </div>
+    )}
+
 
       {editingAreaId && (
         <AreaManager 
