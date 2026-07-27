@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_API_HISTORICO: string;
   readonly VITE_API_KPI: string;
   readonly VITE_API_AREAS_ADMIN: string;
+  readonly VITE_URL_MANUAL_USUARIO: string;
+  readonly VITE_URL_SOPORTE_TI: string;
 }
 
 interface ImportMeta {

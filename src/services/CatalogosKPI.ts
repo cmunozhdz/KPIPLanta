@@ -50,14 +50,13 @@ export const CatalogosKPIService = {
     return [];
   },
 
-  // Obtener lista de unidades de medida (filtro dinámico)
-  getUnidadMedidaLista: async (unidadBuscar: string): Promise<UnidadMedida[]> => {
-    if (!unidadBuscar || unidadBuscar.trim() === '') {
-      return [];
-    }
+  // Obtener lista de unidades de medida
+  getUnidadMedidaLista: async (unidadBuscar: string = '%'): Promise<UnidadMedida[]> => {
     const timestamp = new Date().getTime();
-    // GET a https://serviciosrest.polakgrupo.com/kiosco/Apis/Planta/UnidadMedidaLista?Unidadmedidadescripcion=KG
-    const url = `${getApiUrl()}/UnidadMedidaLista?Unidadmedidadescripcion=${encodeURIComponent(unidadBuscar)}&_=${timestamp}`;
+    // Si la búsqueda es '%' o '%25', pasamos %25 directamente a la querystring para que coincida exactamente con la llamada de Swagger:
+    // https://serviciosrest.polakgrupo.com/Kiosco/Apis/Planta/UnidadMedidaLista?Unidadmedidadescripcion=%25
+    const param = (unidadBuscar === '%' || unidadBuscar === '%25') ? '%25' : encodeURIComponent(unidadBuscar);
+    const url = `${getApiUrl()}/UnidadMedidaLista?Unidadmedidadescripcion=${param}&_=${timestamp}`;
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error('Error al obtener lista de unidades de medida');

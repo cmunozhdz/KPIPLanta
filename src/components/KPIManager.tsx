@@ -23,21 +23,14 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
 
   // Catálogos cargados dinámicamente
   const [categorias, setCategorias] = useState<CategoriaSQCDP[]>([]);
+  const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedida[]>([]);
   const [direcciones] = useState(() => CatalogosKPIService.getDireccionesLista());
-  
-  // Para el autocompletado/desplegable de Unidad de Medida
-  const [unidadSearch, setUnidadSearch] = useState('');
-  const [unidadesList, setUnidadesList] = useState<UnidadMedida[]>([]);
-  const [showUnidadesDropdown, setShowUnidadesDropdown] = useState(false);
-  const [isValidUnidad, setIsValidUnidad] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -48,10 +41,23 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
         console.log(`[KPIManager] Initializing with mode=${mode}, areaId=${areaId}, kpiId=${kpiId}`);
         console.log(`[KPIManager] kpiId type: ${typeof kpiId}, value: ${JSON.stringify(kpiId)}`);
         
-        const cats = await CatalogosKPIService.getCategoriasLista();
+        const [cats, unidades] = await Promise.all([
+          CatalogosKPIService.getCategoriasLista(),
+          CatalogosKPIService.getUnidadMedidaLista('%')
+        ]);
+
         setCategorias(cats);
         if (cats.length > 0) {
           setCategoria(cats[0].CategoriaSQCDPID);
+        }
+
+        // Ordenar unidades de medida por UnidadMedidaDescripcion
+        const sortedUnidades = [...unidades].sort((a, b) => 
+          (a.UnidadMedidaDescripcion || '').localeCompare(b.UnidadMedidaDescripcion || '', undefined, { sensitivity: 'base' })
+        );
+        setUnidadesMedida(sortedUnidades);
+        if (sortedUnidades.length > 0 && mode === 'INS') {
+          setUnidaddemedida(sortedUnidades[0].UnidadMedidaId);
         }
 
         if (mode === 'UPD' && kpiId !== undefined && kpiId !== null && kpiId !== '') {
@@ -80,10 +86,8 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
             setDireccion(Number(direccion));
             setUnidaddemedida(unidad);
             setUnidadMedidaDesc(unidadDesc);
-            setUnidadSearch(unidadDesc || unidad);
             setPeriodicidad(periodicidadVal === 'S' ? 'S' : 'M');
             setActivo(activo);
-            setIsValidUnidad(!!unidad);
             
             console.log(`[KPIManager] Form population complete`);
           } else {
@@ -102,60 +106,14 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
     init();
   }, [mode, kpiId, retryCount]);
 
-  // Buscar unidades de medida cuando cambie el texto de búsqueda
-  useEffect(() => {
-    if (unidadSearch.trim() === '') {
-      setUnidadesList([]);
-      setShowUnidadesDropdown(false);
-      return;
-    }
-
-    // No gatillar búsqueda si coincide exactamente con la seleccionada
-    if (unidadSearch === unidadMedidaDesc) {
-      return;
-    }
-
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(async () => {
-      try {
-        const res = await CatalogosKPIService.getUnidadMedidaLista(unidadSearch);
-        setUnidadesList(res);
-        setShowUnDropdown(res.length > 0);
-      } catch (err) {
-        console.error('Error al buscar unidades de medida', err);
-      }
-    }, 400);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [unidadSearch, unidadMedidaDesc]);
-
-  const setShowUnDropdown = (show: boolean) => {
-    setShowUnidadesDropdown(show);
-  };
-
-  const handleSelectUnidad = (unidad: UnidadMedida) => {
-    setUnidaddemedida(unidad.UnidadMedidaId);
-    setUnidadMedidaDesc(unidad.UnidadMedidaDescripcion);
-    setUnidadSearch(unidad.UnidadMedidaDescripcion);
-    setIsValidUnidad(true);
-    setShowUnidadesDropdown(false);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (meta === '') {
       setError('La Meta no puede estar vacía.');
       return;
     }
-    if (!isValidUnidad) {
-      setError('Debe seleccionar una Unidad de Medida válida de la lista.');
+    if (!unidaddemedida) {
+      setError('Debe seleccionar una Unidad de Medida.');
       return;
     }
     if (!periodicidad) {
@@ -315,41 +273,30 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
             </div>
 
             <div className="grid grid-cols-2 gap-4 relative">
-              {/* Unidad de Medida Autocomplete/Dropdown */}
-              <div className="space-y-2 relative">
-                <label htmlFor="kpiUnidadSearch" className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Unidad de Medida</label>
-                <div className="relative">
-                  <input
-                    id="kpiUnidadSearch"
-                    type="text"
-                    value={unidadSearch}
-                    onChange={(e) => {
-                      setUnidadSearch(e.target.value);
-                      setIsValidUnidad(false); // Reset validation state while typing
-                    }}
-                    placeholder="Buscar unidad (ej: KG)"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-5 pr-10 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all"
-                    required
-                  />
-                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                </div>
-                
-                {showUnidadesDropdown && unidadesList.length > 0 && (
-                  <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-2xl shadow-xl z-50">
-                    {unidadesList.map((uni) => (
-                      <div
-                        key={uni.UnidadMedidaId}
-                        onClick={() => handleSelectUnidad(uni)}
-                        className="px-4 py-3 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors border-b border-slate-50 last:border-0"
-                      >
-                        <span className="font-black text-slate-900">{uni.UnidadMedidaId}</span> - {uni.UnidadMedidaDescripcion}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {!isValidUnidad && unidadSearch.trim() !== '' && !showUnidadesDropdown && (
-                  <p className="text-[9px] text-red-500 font-bold ml-1">Seleccione un elemento de la lista.</p>
-                )}
+              {/* Unidad de Medida Dropdown */}
+              <div className="space-y-2">
+                <label htmlFor="kpiUnidadMedida" className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Unidad de Medida</label>
+                <select
+                  id="kpiUnidadMedida"
+                  value={unidaddemedida}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    setUnidaddemedida(selectedId);
+                    const selectedItem = unidadesMedida.find(u => u.UnidadMedidaId === selectedId);
+                    if (selectedItem) {
+                      setUnidadMedidaDesc(selectedItem.UnidadMedidaDescripcion);
+                    }
+                  }}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-black focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                  required
+                >
+                  <option value="" disabled>Seleccione una unidad</option>
+                  {unidadesMedida.map((uni) => (
+                    <option key={uni.UnidadMedidaId} value={uni.UnidadMedidaId}>
+                      {uni.UnidadMedidaDescripcion}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-2">

@@ -17,7 +17,6 @@ import {
   BarChart3,
   Calendar,
   Clock,
-  Download,
   Edit3,
   Eye,
   EyeOff,
@@ -133,7 +132,7 @@ export default function App() {
           color: a.AreaColor || 'slate'
         }));
         setAreas(fetchedAreas);
-        
+
         // Cargar todos los KPIs dinámicamente desde la API para cada una de las áreas
         const kpisPromises = fetchedAreas.map(async (area) => {
           try {
@@ -163,7 +162,7 @@ export default function App() {
             return [];
           }
         });
-        
+
         const allKpisLists = await Promise.all(kpisPromises);
         const allKpis = allKpisLists.flat();
         setData(allKpis);
@@ -279,13 +278,13 @@ export default function App() {
   const weekRange = useMemo(() => {
     const year = parseInt(filters.year, 10) || 2026;
     const week = parseInt(filters.week, 10) || 1;
-    
+
     // ISO 8601: la semana 1 es la que contiene el primer jueves del año (o el 4 de enero)
     const jan4 = new Date(year, 0, 4);
     const day = jan4.getDay(); // 0 = Domingo, 1 = Lunes, etc.
     const diffToMonday = day === 0 ? -6 : 1 - day;
     const mondayOfW1 = new Date(jan4.getTime() + diffToMonday * 24 * 60 * 60 * 1000);
-    
+
     const startOfWeek = new Date(mondayOfW1.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
     const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000);
 
@@ -320,7 +319,7 @@ export default function App() {
       const monthNum = MONTH_MAP_TO_NUM[filters.month] || 1;
       const weekNum = parseInt(filters.week, 10);
       const list = await kpiHistoricoService.getHistoricoSemanal(yearNum, monthNum, weekNum, view);
-      
+
       const map: Record<number, KpiHistoricoSemanal> = {};
       list.forEach(item => {
         map[item.KPIID] = item;
@@ -534,14 +533,14 @@ export default function App() {
       <header className="max-w-7xl mx-auto bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8">
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
           <div>
-            <div 
+            <div
               className="flex items-center gap-3 mb-1 cursor-pointer group"
               onClick={() => setView('overview')}
               title="Ir al inicio"
             >
-              <img 
-                src={logoOEE} 
-                alt="Logo OEE" 
+              <img
+                src={logoOEE}
+                alt="Logo OEE"
                 className="min-w-[16px] min-h-[16px] max-w-[65px] max-h-[65px] w-auto h-auto object-contain transition-transform group-hover:scale-105"
               />
               <h1 className="text-2xl font-black text-slate-800 tracking-tight">KPI Planta Polak</h1>
@@ -591,10 +590,6 @@ export default function App() {
                 </span>
               </div>
             </div>
-
-            <button className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95">
-              <Download size={16} /> Exportar WCM
-            </button>
 
             {/* Información de Sesión de Usuario */}
             <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-2 px-3 ml-auto md:ml-0">
@@ -864,9 +859,8 @@ export default function App() {
             <span className="text-[9px] font-black uppercase tracking-[0.3em]">Lean WCM Framework © 2026</span>
           </div>
           <div className="flex gap-6">
-            <a href="#" className="text-[9px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors">Manual de Usuario</a>
-            <a href="#" className="text-[9px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors">Politicas EHS</a>
-            <a href="#" className="text-[9px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors">Soporte TI</a>
+            <a href={import.meta.env.VITE_URL_MANUAL_USUARIO || "https://docs.google.com/document/d/1c4vjpJUuu60J6HiVSXdx58YGVvdQgK7BRzh_cO_sOdA/edit?usp=sharing"} target="_blank" rel="noopener noreferrer" className="text-[9px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors">Manual de Usuario</a>
+            <a href={import.meta.env.VITE_URL_SOPORTE_TI || "https://docs.google.com/forms/d/e/1FAIpQLSfdgYDGU6-BmZ-nkTV6B2Z5UdbNtzwu8M5maMkbcsTEMJNfYw/viewform"} target="_blank" rel="noopener noreferrer" className="text-[9px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors">Soporte TI</a>
           </div>
         </div>
       </footer>
