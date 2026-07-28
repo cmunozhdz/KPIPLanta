@@ -14,6 +14,18 @@ const buildFechaConsultaAdmin = (): string => {
   return `${YYYY}-${mm}-${dd}-${hh}:${MM}:${ss}`;
 };
 
+const buildFechaConsulta = (): string => {
+  const now = new Date();
+  const pad = (num: number) => num.toString().padStart(2, '0');
+  const YYYY = now.getFullYear();
+  const mm = pad(now.getMonth() + 1);
+  const dd = pad(now.getDate());
+  const hh = pad(now.getHours());
+  const MM = pad(now.getMinutes());
+  const ss = pad(now.getSeconds());
+  return `${YYYY}-${mm}-${dd} ${hh}:${MM}:${ss}`;
+};
+
 export interface ExOpPermiso {
   IPermisosId: string;
   IPermisosDescripcion: string;
@@ -33,10 +45,13 @@ export interface AdminAreasResponse {
 }
 
 export const areaService = {
-  getAreas: async () => {
+  getAreas: async (usuario: string = '') => {
     const apiUrl = getApiUrl();
-    const timestamp = new Date().getTime();
-    const response = await fetch(`${apiUrl}/AreaLista?_=${timestamp}`, {
+    const fechaConsulta = buildFechaConsulta();
+    const baseUrl = apiUrl.endsWith('/AreaLista') ? apiUrl : `${apiUrl}/AreaLista`;
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    const url = `${baseUrl}${separator}Fechaconsulta=${encodeURIComponent(fechaConsulta)}&Usuario=${encodeURIComponent(usuario)}`;
+    const response = await fetch(url, {
       cache: 'no-store'
     });
     

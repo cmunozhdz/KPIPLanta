@@ -119,11 +119,12 @@ export default function App() {
     }
   }, [user]);
 
-  const fetchAreas = async () => {
+  const fetchAreas = async (usuarioParam?: string) => {
     setIsLoading(true);
     setApiError(null);
     try {
-      const jsonData = await areaService.getAreas();
+      const currentUserEmail = usuarioParam !== undefined ? usuarioParam : (user?.email || '');
+      const jsonData = await areaService.getAreas(currentUserEmail);
       if (jsonData && jsonData.Areas) {
         const fetchedAreas: Area[] = jsonData.Areas.map((a: any) => ({
           id: a.AreaId,
@@ -178,8 +179,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchAreas();
-  }, []);
+    fetchAreas(user?.email || '');
+  }, [user?.email]);
 
   const [editingKpi, setEditingKpi] = useState<Kpi | null>(null);
   const [selectedHistoricoData, setSelectedHistoricoData] = useState<KpiHistoricoSemanal | undefined>(undefined);
@@ -628,7 +629,7 @@ export default function App() {
               {apiError}
             </p>
             <button
-              onClick={() => fetchAreas()}
+              onClick={() => fetchAreas(user?.email || '')}
               className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-8 rounded-2xl shadow-xl shadow-red-200 transition-all uppercase text-[11px] tracking-widest"
             >
               Reintentar Conexión

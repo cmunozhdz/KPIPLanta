@@ -17,7 +17,8 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
     AreaActivo: true,
     AreaIcon: '',
     AreaColor: '',
-    AreaPermiso: ''
+    AreaPermiso: '',
+    AreaPermisoRegistroKPI: ''
   });
   const [loading, setLoading] = useState(mode === 'UPD');
   const [saving, setSaving] = useState(false);
@@ -56,7 +57,8 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
             AreaActivo: data.AreaActivo ?? true,
             AreaIcon: data.AreaIcon || '',
             AreaColor: data.AreaColor || '',
-            AreaPermiso: data.AreaPermiso || ''
+            AreaPermiso: data.AreaPermiso || '',
+            AreaPermisoRegistroKPI: data.AreaPermisoKPIId || data.AreaPermisoRegistroKPI || ''
           });
         } catch (err) {
           setError('No se pudo cargar la información del área.');
@@ -68,8 +70,8 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
     fetchArea();
   }, [areaId, mode]);
 
-  // Determinar si el permiso actualmente guardado en BD no es válido en el catálogo
-  const isInvalidValue = Boolean(
+  // Validar si el permiso de Administrador seleccionado existe en la lista oficial
+  const isInvalidAdminPermiso = Boolean(
     !loadingPermisos &&
     !permisosApiError &&
     formData.AreaPermiso &&
@@ -77,7 +79,25 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
     !permisosList.some(p => p.IPermisosId === formData.AreaPermiso)
   );
 
-  const isSaveDisabled = saving || loadingPermisos || !!permisosApiError || isInvalidValue;
+  // Validar si el permiso de Registro KPI seleccionado existe en la lista oficial
+  const isInvalidKPIPermiso = Boolean(
+    !loadingPermisos &&
+    !permisosApiError &&
+    formData.AreaPermisoRegistroKPI &&
+    permisosList.length > 0 &&
+    !permisosList.some(p => p.IPermisosId === formData.AreaPermisoRegistroKPI)
+  );
+
+  // Validar que ambos permisos tengan un valor seleccionado válido de la lista
+  const hasValidAdminPermiso = Boolean(
+    formData.AreaPermiso && permisosList.some(p => p.IPermisosId === formData.AreaPermiso)
+  );
+
+  const hasValidKPIPermiso = Boolean(
+    formData.AreaPermisoRegistroKPI && permisosList.some(p => p.IPermisosId === formData.AreaPermisoRegistroKPI)
+  );
+
+  const isSaveDisabled = saving || loadingPermisos || !!permisosApiError || !hasValidAdminPermiso || !hasValidKPIPermiso;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +108,13 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
     try {
       await areaService.saveArea({
         trnMode: mode,
-        ...formData
+        AreaId: formData.AreaId,
+        AreaDescripcion: formData.AreaDescripcion,
+        AreaColor: formData.AreaColor,
+        AreaIcon: formData.AreaIcon,
+        AreaActivo: formData.AreaActivo,
+        AreaPermiso: formData.AreaPermiso,
+        AreaPermisoRegistroKPI: formData.AreaPermisoRegistroKPI
       });
 
       onSaved();
@@ -121,7 +147,7 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden border border-slate-200"
+        className="relative bg-white rounded-[2rem] w-full max-w-4xl shadow-2xl overflow-hidden border border-slate-200"
       >
         <div className="bg-slate-50 px-8 py-8 border-b border-slate-100 flex justify-between items-center">
           <div>
@@ -145,7 +171,7 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
               </div>
             )}
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">ID de Área</label>
                 <input 
@@ -158,21 +184,47 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
                   required 
                 />
               </div>
+
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Permiso</label>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Permisos Administrador</label>
                 <select 
                   name="AreaPermiso" 
                   value={formData.AreaPermiso}
                   onChange={handleChange}
                   disabled={loadingPermisos || !!permisosApiError}
-                  className={`w-full bg-slate-50 border ${isInvalidValue ? 'border-rose-400 focus:ring-rose-100 focus:border-rose-500 text-rose-700' : 'border-slate-200 focus:ring-blue-100 focus:border-blue-500 text-slate-800'} rounded-2xl px-5 py-4 text-sm font-black outline-none transition-all disabled:opacity-60 disabled:bg-slate-100 cursor-pointer disabled:cursor-not-allowed`}
+                  className={`w-full bg-slate-50 border ${isInvalidAdminPermiso ? 'border-rose-400 focus:ring-rose-100 focus:border-rose-500 text-rose-700' : 'border-slate-200 focus:ring-blue-100 focus:border-blue-500 text-slate-800'} rounded-2xl px-5 py-4 text-sm font-black outline-none transition-all disabled:opacity-60 disabled:bg-slate-100 cursor-pointer disabled:cursor-not-allowed`}
                 >
                   <option value="">
                     {loadingPermisos ? 'Cargando permisos...' : '-- Seleccione un permiso --'}
                   </option>
-                  {isInvalidValue && (
+                  {isInvalidAdminPermiso && (
                     <option value={formData.AreaPermiso} disabled>
                       ⚠️ {formData.AreaPermiso} (Valor no válido en BD)
+                    </option>
+                  )}
+                  {permisosList.map(permiso => (
+                    <option key={permiso.IPermisosId} value={permiso.IPermisosId}>
+                      {permiso.IPermisosDescripcion}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] ml-1">Permisos de registro KPI</label>
+                <select 
+                  name="AreaPermisoRegistroKPI" 
+                  value={formData.AreaPermisoRegistroKPI}
+                  onChange={handleChange}
+                  disabled={loadingPermisos || !!permisosApiError}
+                  className={`w-full bg-slate-50 border ${isInvalidKPIPermiso ? 'border-rose-400 focus:ring-rose-100 focus:border-rose-500 text-rose-700' : 'border-slate-200 focus:ring-blue-100 focus:border-blue-500 text-slate-800'} rounded-2xl px-5 py-4 text-sm font-black outline-none transition-all disabled:opacity-60 disabled:bg-slate-100 cursor-pointer disabled:cursor-not-allowed`}
+                >
+                  <option value="">
+                    {loadingPermisos ? 'Cargando permisos...' : '-- Seleccione un permiso --'}
+                  </option>
+                  {isInvalidKPIPermiso && (
+                    <option value={formData.AreaPermisoRegistroKPI} disabled>
+                      ⚠️ {formData.AreaPermisoRegistroKPI} (Valor no válido en BD)
                     </option>
                   )}
                   {permisosList.map(permiso => (
@@ -195,16 +247,16 @@ export const AreaManager: React.FC<AreaManagerProps> = ({ areaId, mode, onClose,
               </div>
             )}
 
-            {isInvalidValue && !permisosApiError && (
+            {(isInvalidAdminPermiso || isInvalidKPIPermiso) && !permisosApiError && (
               <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-800 text-xs shadow-sm">
                 <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                 <div>
                   <span className="block font-black text-amber-900 text-sm">Valor de Permiso No Válido</span>
                   <span className="font-normal text-amber-800 mt-0.5 block">
-                    El permiso almacenado en la base de datos (<strong>"{formData.AreaPermiso}"</strong>) no existe en la lista oficial de permisos ExOP.
+                    Uno o ambos permisos seleccionados o almacenados no existen en la lista oficial de permisos ExOP.
                   </span>
                   <span className="font-bold text-amber-900 mt-1 block">
-                    Para poder guardar los cambios, debes seleccionar un permiso válido de la lista desplegable.
+                    Para poder guardar los cambios, debes seleccionar permisos válidos de las listas desplegables.
                   </span>
                 </div>
               </div>
