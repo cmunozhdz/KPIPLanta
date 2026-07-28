@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
+import logoOEE from './assets/logoOEE.png';
 import {
   Shield,
   CheckCircle,
@@ -16,7 +17,6 @@ import {
   BarChart3,
   Calendar,
   Clock,
-  Download,
   Edit3,
   Eye,
   EyeOff,
@@ -119,11 +119,12 @@ export default function App() {
     }
   }, [user]);
 
-  const fetchAreas = async () => {
+  const fetchAreas = async (usuarioParam?: string) => {
     setIsLoading(true);
     setApiError(null);
     try {
-      const jsonData = await areaService.getAreas();
+      const currentUserEmail = usuarioParam !== undefined ? usuarioParam : (user?.email || '');
+      const jsonData = await areaService.getAreas(currentUserEmail);
       if (jsonData && jsonData.Areas) {
         const fetchedAreas: Area[] = jsonData.Areas.map((a: any) => ({
           id: a.AreaId,
@@ -132,7 +133,7 @@ export default function App() {
           color: a.AreaColor || 'slate'
         }));
         setAreas(fetchedAreas);
-        
+
         // Cargar todos los KPIs dinámicamente desde la API para cada una de las áreas
         const kpisPromises = fetchedAreas.map(async (area) => {
           try {
@@ -162,7 +163,7 @@ export default function App() {
             return [];
           }
         });
-        
+
         const allKpisLists = await Promise.all(kpisPromises);
         const allKpis = allKpisLists.flat();
         setData(allKpis);
@@ -178,8 +179,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchAreas();
-  }, []);
+    fetchAreas(user?.email || '');
+  }, [user?.email]);
 
   const [editingKpi, setEditingKpi] = useState<Kpi | null>(null);
   const [selectedHistoricoData, setSelectedHistoricoData] = useState<KpiHistoricoSemanal | undefined>(undefined);
@@ -278,13 +279,13 @@ export default function App() {
   const weekRange = useMemo(() => {
     const year = parseInt(filters.year, 10) || 2026;
     const week = parseInt(filters.week, 10) || 1;
-    
+
     // ISO 8601: la semana 1 es la que contiene el primer jueves del año (o el 4 de enero)
     const jan4 = new Date(year, 0, 4);
     const day = jan4.getDay(); // 0 = Domingo, 1 = Lunes, etc.
     const diffToMonday = day === 0 ? -6 : 1 - day;
     const mondayOfW1 = new Date(jan4.getTime() + diffToMonday * 24 * 60 * 60 * 1000);
-    
+
     const startOfWeek = new Date(mondayOfW1.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
     const endOfWeek = new Date(startOfWeek.getTime() + 6 * 24 * 60 * 60 * 1000);
 
@@ -319,7 +320,7 @@ export default function App() {
       const monthNum = MONTH_MAP_TO_NUM[filters.month] || 1;
       const weekNum = parseInt(filters.week, 10);
       const list = await kpiHistoricoService.getHistoricoSemanal(yearNum, monthNum, weekNum, view);
-      
+
       const map: Record<number, KpiHistoricoSemanal> = {};
       list.forEach(item => {
         map[item.KPIID] = item;
@@ -533,13 +534,19 @@ export default function App() {
       <header className="max-w-7xl mx-auto bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8">
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-200">
-                <BarChart3 className="text-white" size={24} />
-              </div>
+            <div
+              className="flex items-center gap-3 mb-1 cursor-pointer group"
+              onClick={() => setView('overview')}
+              title="Ir al inicio"
+            >
+              <img
+                src={logoOEE}
+                alt="Logo OEE"
+                className="min-w-[16px] min-h-[16px] max-w-[65px] max-h-[65px] w-auto h-auto object-contain transition-transform group-hover:scale-105"
+              />
               <h1 className="text-2xl font-black text-slate-800 tracking-tight">KPI Planta Polak</h1>
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-11">Pillar Management System</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Pillar Management System</p>
           </div>
 
           <div className="flex flex-wrap gap-3 items-center w-full xl:w-auto">
@@ -585,10 +592,6 @@ export default function App() {
               </div>
             </div>
 
-            <button className="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 transition-all active:scale-95">
-              <Download size={16} /> Exportar WCM
-            </button>
-
             {/* Información de Sesión de Usuario */}
             <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-2xl p-2 px-3 ml-auto md:ml-0">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
@@ -626,7 +629,7 @@ export default function App() {
               {apiError}
             </p>
             <button
-              onClick={() => fetchAreas()}
+              onClick={() => fetchAreas(user?.email || '')}
               className="bg-red-600 hover:bg-red-700 text-white font-black py-3 px-8 rounded-2xl shadow-xl shadow-red-200 transition-all uppercase text-[11px] tracking-widest"
             >
               Reintentar Conexión
@@ -659,6 +662,7 @@ export default function App() {
                   key="master"
                   areas={areas}
                   role={role}
+                  userEmail={user.email}
                   onAreasUpdated={fetchAreas}
                 />
               ) : (
@@ -857,9 +861,8 @@ export default function App() {
             <span className="text-[9px] font-black uppercase tracking-[0.3em]">Lean WCM Framework © 2026</span>
           </div>
           <div className="flex gap-6">
-            <a href="#" className="text-[9px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors">Manual de Usuario</a>
-            <a href="#" className="text-[9px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors">Politicas EHS</a>
-            <a href="#" className="text-[9px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors">Soporte TI</a>
+            <a href={import.meta.env.VITE_URL_MANUAL_USUARIO || "https://docs.google.com/document/d/1c4vjpJUuu60J6HiVSXdx58YGVvdQgK7BRzh_cO_sOdA/edit?usp=sharing"} target="_blank" rel="noopener noreferrer" className="text-[9px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors">Manual de Usuario</a>
+            <a href={import.meta.env.VITE_URL_SOPORTE_TI || "https://docs.google.com/forms/d/e/1FAIpQLSfdgYDGU6-BmZ-nkTV6B2Z5UdbNtzwu8M5maMkbcsTEMJNfYw/viewform"} target="_blank" rel="noopener noreferrer" className="text-[9px] font-black text-slate-400 uppercase hover:text-blue-600 transition-colors">Soporte TI</a>
           </div>
         </div>
       </footer>
