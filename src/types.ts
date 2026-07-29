@@ -55,3 +55,18 @@ export interface Area {
   icon: string; // lucide icon name
   color: string;
 }
+
+export interface CalendarioSemanalItem {
+  Ano: number;
+  Mes: number;
+  Semana: number;
+  Inicio: string;
+  Fin: string;
+  Etiqueta: string;
+}
+
+export interface CalendarioSemanalResponse {
+  CalendarioSQCDPDatas: CalendarioSemanalItem[];
+  Count: number;
+}
+

@@ -61,9 +61,12 @@ import { KpiCard } from './components/KpiCard';
 import { SqcdpPillars } from './components/SqcdpPillars';
 import { KPIManagerHistorico } from './components/KPIManagerHistorico';
 import { kpiHistoricoService } from './services/kpiHistoricoService';
-import { KpiHistoricoSemanal } from './types';
+import { KpiHistoricoSemanal, CalendarioSemanalItem } from './types';
 import { KPIDetailsModal } from './components/KPIDetailsModal';
 import { PanoramaGlobal } from './components/PanoramaGlobal';
+import { CalendarView } from './components/CalendarView';
+import { calendarService } from './services/calendarService';
+
 
 // --- Utility Components ---
 
@@ -266,6 +269,57 @@ export default function App() {
     }
   }, [filters]);
 
+  const [headerCalendarWeeks, setHeaderCalendarWeeks] = useState<CalendarioSemanalItem[]>([]);
+  const [isLoadingHeaderCalendar, setIsLoadingHeaderCalendar] = useState<boolean>(false);
+
+  const MONTH_MAP_TO_NUM: Record<string, number> = {
+    'Enero': 1, 'Febrero': 2, 'Marzo': 3, 'Abril': 4, 'Mayo': 5, 'Junio': 6,
+    'Julio': 7, 'Agosto': 8, 'Septiembre': 9, 'Octubre': 10, 'Noviembre': 11, 'Diciembre': 12
+  };
+
+  const formatDateDisplay = (dateStr: string): string => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchHeaderCalendar = async () => {
+      const yearNum = parseInt(filters.year, 10) || new Date().getFullYear();
+      const monthNum = MONTH_MAP_TO_NUM[filters.month] || (new Date().getMonth() + 1);
+      setIsLoadingHeaderCalendar(true);
+      try {
+        const items = await calendarService.getCalendarioSemanal(yearNum, monthNum, monthNum);
+        if (isMounted && Array.isArray(items) && items.length > 0) {
+          setHeaderCalendarWeeks(items);
+          const currentWeekNum = parseInt(filters.week, 10);
+          const exists = items.some(item => item.Semana === currentWeekNum);
+          if (!exists) {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const activeWeek = items.find(w => todayStr >= w.Inicio && todayStr <= w.Fin) || items[0];
+            setFilters(f => ({ ...f, week: String(activeWeek.Semana) }));
+          }
+        }
+      } catch (err) {
+        console.error('Error cargando calendario para el header:', err);
+      } finally {
+        if (isMounted) setIsLoadingHeaderCalendar(false);
+      }
+    };
+
+    fetchHeaderCalendar();
+    return () => { isMounted = false; };
+  }, [filters.year, filters.month]);
+
+  const currentHeaderWeekItem = useMemo(() => {
+    const currentWeekNum = parseInt(filters.week, 10);
+    return headerCalendarWeeks.find(item => item.Semana === currentWeekNum) || null;
+  }, [headerCalendarWeeks, filters.week]);
+
   const getMonthFromWeek = (yearStr: string, weekStr: string): string => {
     const year = parseInt(yearStr, 10) || 2026;
     const week = parseInt(weekStr, 10) || 1;
@@ -301,12 +355,6 @@ export default function App() {
       end: format(endOfWeek)
     };
   }, [filters.year, filters.week]);
-
-
-  const MONTH_MAP_TO_NUM: Record<string, number> = {
-    'Enero': 1, 'Febrero': 2, 'Marzo': 3, 'Abril': 4, 'Mayo': 5, 'Junio': 6,
-    'Julio': 7, 'Agosto': 8, 'Septiembre': 9, 'Octubre': 10, 'Noviembre': 11, 'Diciembre': 12
-  };
 
   const fetchHistorico = async () => {
     if (view === 'overview' || view === 'master') {
@@ -550,16 +598,15 @@ export default function App() {
           </div>
 
           <div className="flex flex-wrap gap-3 items-center w-full xl:w-auto">
-            {/* Filtros Temporales */}
-            <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
+            {/* Filtros Temporales Sincronizados con API de Calendario */}
+            <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-xs">
               <div className="flex items-center gap-2 pr-3 border-r border-slate-200">
                 <Calendar size={16} className="text-slate-600" />
                 <select
                   value={filters.year}
                   onChange={(e) => {
                     const newYear = e.target.value;
-                    const newMonth = getMonthFromWeek(newYear, filters.week);
-                    setFilters(f => ({ ...f, year: newYear, month: newMonth }));
+                    setFilters(f => ({ ...f, year: newYear }));
                   }}
                   className="bg-transparent text-[11px] font-black text-slate-700 outline-none cursor-pointer appearance-none uppercase"
                 >
@@ -573,22 +620,28 @@ export default function App() {
               >
                 {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
-              <div className="flex items-center gap-1 pl-2 pr-2 py-0.5 bg-green-100 text-green-700 rounded-lg border border-green-200">
-                <span className="text-[10px] font-black text-green-700 uppercase">W</span>
+              <div className="flex items-center px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl shadow-xs">
                 <select
                   value={filters.week}
                   onChange={(e) => {
                     const newWeek = e.target.value;
-                    const newMonth = getMonthFromWeek(filters.year, newWeek);
-                    setFilters(f => ({ ...f, week: newWeek, month: newMonth }));
+                    setFilters(f => ({ ...f, week: newWeek }));
                   }}
-                  className="bg-transparent text-[11px] font-black text-green-700 outline-none cursor-pointer appearance-none uppercase mr-1"
+                  disabled={isLoadingHeaderCalendar || headerCalendarWeeks.length === 0}
+                  className="bg-transparent text-[11px] font-black text-emerald-800 outline-none cursor-pointer uppercase"
                 >
-                  {WEEKS.map(w => <option key={w} value={w} className="text-slate-800 bg-white">{w}</option>)}
+                  {headerCalendarWeeks.length > 0 ? (
+                    headerCalendarWeeks.map(item => (
+                      <option key={item.Semana} value={item.Semana} className="text-slate-800 bg-white font-semibold">
+                        W {item.Semana} | {formatDateDisplay(item.Inicio)} - {formatDateDisplay(item.Fin)}
+                      </option>
+                    ))
+                  ) : (
+                    <option value={filters.week} className="text-slate-800 bg-white font-semibold">
+                      W {filters.week} | {weekRange.start} - {weekRange.end}
+                    </option>
+                  )}
                 </select>
-                <span className="text-[9px] font-black text-green-600/80 border-l border-green-300 pl-1.5 whitespace-nowrap">
-                  {weekRange.start} - {weekRange.end}
-                </span>
               </div>
             </div>
 
@@ -644,6 +697,7 @@ export default function App() {
               setView={setView}
               userEmail={user.email}
               onRolesResolved={setRole}
+              filters={filters}
             />
 
             <AnimatePresence mode="wait">
@@ -665,7 +719,14 @@ export default function App() {
                   userEmail={user.email}
                   onAreasUpdated={fetchAreas}
                 />
+              ) : view === 'calendar' ? (
+                <CalendarView
+                  key="calendar"
+                  filters={filters}
+                  onSelectWeekFilter={(year, month, week) => setFilters(f => ({ ...f, year, month, week }))}
+                />
               ) : (
+
                 <motion.div
                   key="detail"
                   initial={{ opacity: 0, x: 10 }}
