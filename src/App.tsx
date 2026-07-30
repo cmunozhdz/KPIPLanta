@@ -709,6 +709,7 @@ export default function App() {
                   role={role}
                   userEmail={user.email}
                   onAreasUpdated={fetchAreas}
+                  onNavigateToCalendar={() => setView('calendar')}
                 />
               ) : view === 'calendar' ? (
                 <CalendarView

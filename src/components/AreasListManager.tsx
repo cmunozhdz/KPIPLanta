@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Area, Kpi } from '../types';
 import { SQCDP_CATEGORIES } from '../constants/data';
-import { Edit3, Trash2, Plus, Factory, ChevronDown, ChevronUp, AlertTriangle, X, Loader2, RefreshCw, ShieldAlert } from 'lucide-react';
+import { Edit3, Trash2, Plus, Factory, ChevronDown, ChevronUp, AlertTriangle, X, Loader2, RefreshCw, ShieldAlert, Calendar } from 'lucide-react';
 import { AreaManager } from './AreaManager';
 import { KPIManager } from './KPIManager';
 import { CatalogosKPIService } from '../services/CatalogosKPI';
@@ -13,13 +13,15 @@ interface AreasListManagerProps {
   role: string;
   userEmail?: string;
   onAreasUpdated: () => void;
+  onNavigateToCalendar?: () => void;
 }
 
 export const AreasListManager: React.FC<AreasListManagerProps> = ({
   areas,
   role,
   userEmail,
-  onAreasUpdated
+  onAreasUpdated,
+  onNavigateToCalendar
 }) => {
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
   const [isCreatingArea, setIsCreatingArea] = useState(false);
@@ -129,19 +131,29 @@ export const AreasListManager: React.FC<AreasListManagerProps> = ({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Panel de Datos Maestros</h2>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Administración de Estructura WCM</p>
         </div>
-        {role === 'admin' && (
-          <button
-            onClick={() => setIsCreatingArea(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95"
-          >
-            <Plus size={18} /> Nueva Área
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {onNavigateToCalendar && (
+            <button
+              onClick={onNavigateToCalendar}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-md flex items-center gap-2 transition-all active:scale-95 cursor-pointer border border-emerald-600"
+            >
+              <Calendar size={18} /> CALENDARIO
+            </button>
+          )}
+          {role === 'admin' && (
+            <button
+              onClick={() => setIsCreatingArea(true)}
+              className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95"
+            >
+              <Plus size={18} /> Nueva Área
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Pantalla / Notificación Premium de Error */}

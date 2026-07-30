@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Database, Shield, Settings, Eye, CheckCircle, Leaf, Factory, Package, Users, Zap, Target, Info, Calendar } from 'lucide-react';
+import { Database, Shield, Settings, Eye, CheckCircle, Leaf, Factory, Package, Users, Zap, Target, Info } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { authService } from '../services/authService';
 import { Area, UserRole } from '../types';
@@ -135,18 +135,6 @@ export const Navbar: React.FC<NavbarProps> = ({ areas, view, setView, userEmail,
             Datos Maestros
           </button>
         )}
-        <button
-          onClick={() => setView('calendar')}
-          className={cn(
-            "flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all border",
-            view === 'calendar'
-              ? 'bg-emerald-600 text-white border-emerald-600 shadow-md translate-y-[-2px]'
-              : 'bg-white text-emerald-600 border-emerald-200 hover:border-emerald-300'
-          )}
-        >
-          <Calendar size={16} />
-          Calendario
-        </button>
 
       </nav>
 
