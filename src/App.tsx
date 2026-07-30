@@ -195,12 +195,18 @@ export default function App() {
   const [confirmToggle, setConfirmToggle] = useState<Kpi | null>(null);
   const LS_KEY = 'kpi_visible_top_map_v1';
 
-  // Estados de filtros
   const [filters, setFilters] = useState(() => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    let shouldReset = false;
+    const currentYearNum = now.getFullYear();
+    const currentMonthIndex = now.getMonth();
+    const yearStr = String(currentYearNum);
+    const monthStr = MONTHS[currentMonthIndex] || MONTHS[0];
 
+    // La semana se determinará mediante la respuesta de la API de calendario
+    const weekStr = '1';
+
+    let shouldReset = false;
     try {
       const lastInitDate = localStorage.getItem('kpi_last_init_date');
       if (lastInitDate !== todayStr) {
@@ -223,28 +229,6 @@ export default function App() {
     } catch (e) {
       console.warn('Error reading filters from localStorage', e);
     }
-
-    const tempDate = new Date(now.valueOf());
-    tempDate.setHours(0, 0, 0, 0);
-    tempDate.setDate(tempDate.getDate() + 3 - (tempDate.getDay() + 6) % 7);
-    const week1 = new Date(tempDate.getFullYear(), 0, 4);
-    const currentWeekNum = Math.round(((tempDate.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7) + 1;
-    const currentYearNum = tempDate.getFullYear();
-
-    const weekStr = String(Math.max(1, Math.min(52, currentWeekNum)));
-    const yearStr = String(currentYearNum);
-
-    const getMonthFromWeekLocal = (yearStr: string, weekStr: string): string => {
-      const year = parseInt(yearStr, 10) || 2026;
-      const week = parseInt(weekStr, 10) || 1;
-      const janFirst = new Date(year, 0, 1);
-      const daysOffset = (week - 1) * 7 + 3;
-      const targetDate = new Date(janFirst.getTime() + daysOffset * 24 * 60 * 60 * 1000);
-      const monthIndex = targetDate.getMonth();
-      return MONTHS[monthIndex] || MONTHS[0];
-    };
-
-    const monthStr = getMonthFromWeekLocal(yearStr, weekStr);
 
     try {
       localStorage.setItem('kpi_last_init_date', todayStr);
@@ -296,12 +280,19 @@ export default function App() {
         const items = await calendarService.getCalendarioSemanal(yearNum, monthNum, monthNum);
         if (isMounted && Array.isArray(items) && items.length > 0) {
           setHeaderCalendarWeeks(items);
+          const todayStr = new Date().toISOString().split('T')[0];
+          const activeWeek = items.find(w => todayStr >= w.Inicio && todayStr <= w.Fin);
+
+          // Si es un inicio de día (reset), o si la semana seleccionada no existe en el conjunto retornado
+          const lastInitDate = localStorage.getItem('kpi_last_init_date');
+          const isNewDay = lastInitDate !== todayStr;
           const currentWeekNum = parseInt(filters.week, 10);
-          const exists = items.some(item => item.Semana === currentWeekNum);
-          if (!exists) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const activeWeek = items.find(w => todayStr >= w.Inicio && todayStr <= w.Fin) || items[0];
+          const weekExists = items.some(item => item.Semana === currentWeekNum);
+
+          if (activeWeek && (isNewDay || !weekExists)) {
             setFilters(f => ({ ...f, week: String(activeWeek.Semana) }));
+          } else if (!weekExists) {
+            setFilters(f => ({ ...f, week: String(items[0].Semana) }));
           }
         }
       } catch (err) {
