@@ -32,6 +32,6 @@ Cuando se solicite un componente principal de gestión/CRUD (ej. `AreasManager.t
 - **Contenedor Tabla:** `bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden mt-4`
 - **Headers (`<thead>`):** `bg-slate-50 border-b border-slate-200 text-slate-500 font-bold text-xs uppercase tracking-wider py-3.5 px-6 text-left`
 - **Filas (`<tbody>`):** `border-b border-slate-100 hover:bg-slate-50/50 transition-colors py-4 px-6 text-sm text-slate-700`
-- **Acciones (Última Columna Centrada):**
+- **Acciones (Primeras dos Columnas Centrada):**
   - **Botón Modificar:** `<button title="Modificar" className="p-2 text-slate-500 hover:text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors"><i className="bi bi-pencil-square text-base"></i></button>`
   - **Botón Eliminar:** `<button title="Eliminar" className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><i className="bi bi-trash text-base"></i></button>`
