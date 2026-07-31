@@ -7,11 +7,11 @@ import { kpiHistoricoService } from '../services/kpiHistoricoService';
 import { Kpi, Area, KpiHistoricoSemanal } from '../types';
 
 // Mock kpiHistoricoService
-jest.mock('../services/kpiHistoricoService', () => {
+vi.mock('../services/kpiHistoricoService', () => {
   return {
     kpiHistoricoService: {
-      getKpiHistoricoRango: jest.fn(),
-      deleteHistorico: jest.fn(),
+      getKpiHistoricoRango: vi.fn(),
+      deleteHistorico: vi.fn(),
     },
   };
 });

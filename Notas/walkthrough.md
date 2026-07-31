@@ -1,64 +1,69 @@
-# Walkthrough: Portabilidad Segura de APIs y Proxy de Vite
+# Walkthrough: Agente de Pruebas React con Vitest & RTL
 
-Se han realizado modificaciones en las configuraciones de entorno y archivos de servicios para asegurar la portabilidad y evitar las referencias directas (hardcode) a las APIs del Polak Grupo, además de integrar un Proxy de Desarrollo Seguro con Vite.
-
-## Cambios Realizados
-
-1. **Variables de Entorno Centralizadas**:
-   - Se crearon las siguientes variables en `.env`, `.env.production`, `.env.staging`, y `.env.example`:
-     - `VITE_API_URL_SEG`: Ruta de la API de permisos y autenticación.
-     - `VITE_APIS_PLANTA`: Ruta base para la API general de Planta.
-     - `VITE_API_HISTORICO`: Ruta de la API para los registros históricos semanales.
-     - `VITE_API_KPI`: Ruta de la API para el catálogo de KPIs.
-     - `VITE_PROXY_TARGET`: Dirección base del servidor de desarrollo original.
-
-2. **Configuración de Proxy Seguro en Vite** (`vite.config.ts`):
-   - Se añadió un proxy en el servidor de desarrollo de Vite para redirigir peticiones que inicien con `/api` hacia `https://serviciosrest.polakgrupo.com`. Esto mitiga los problemas de CORS locales y mejora la seguridad de desarrollo.
-
-3. **Modificación de Servicios**:
-   - `src/services/kpiHistoricoService.ts`: Ahora consume `import.meta.env.VITE_API_HISTORICO` y el endpoint de calificaciones utiliza dinámicamente `getBaseApiUrl()`.
-   - `src/services/CatalogosKPI.ts`: Actualizado para usar `import.meta.env.VITE_API_KPI` para evitar la URL hardcodeada.
-
-4. **Soporte de TypeScript**:
-   - Se actualizó `src/vite-env.d.ts` para que todas estas variables tengan soporte estático de tipado.
+Este documento sirve como referencia rápida del funcionamiento y la configuración del **Agente de Pruebas (Test Architect Agent)** y la suite de pruebas unitarias/componentes con **Vitest** y **React Testing Library** en el proyecto.
 
 ---
 
-## Guía para Futuros Entornos (Producción, Staging, etc.)
+## 1. Regla del Agente de Pruebas (`.agents/rules/React-TestArchitect-Agent.md`)
 
-Cuando se prepare la aplicación para un nuevo entorno de despliegue, sigue estos pasos:
+Ubicada en: [React-TestArchitect-Agent.md](file:///workspaces/TableroPlanta/.agents/rules/React-TestArchitect-Agent.md)
 
-### Opción A: URLs Absolutas (Predeterminado de Vite)
-En entornos como staging o producción donde no se use un Proxy local en el servidor web de la aplicación (por ejemplo, si se despliega como estático en Cloud Run, S3 o similar):
-1. Edita el archivo de entorno correspondiente (ej: `.env.production` o `.env.staging`).
-2. Configura las variables utilizando las URLs absolutas del servidor API correspondiente:
-   ```env
-   VITE_API_URL_SEG="https://api-seguridad.mi-empresa.com/kiosco/Apis/IntranetSeguridad"
-   VITE_APIS_PLANTA="https://api-planta.mi-empresa.com/kiosco/Apis/Planta"
-   VITE_API_HISTORICO="https://api-historico.mi-empresa.com/kiosco/IAPlanta/AreaKPIHistoricoAPI/area_kpihistoricoes"
-   VITE_API_KPI="https://api-kpis.mi-empresa.com/kiosco/IAPlanta/AreaKPIAPI/area_kpis"
-   ```
-3. Compila la aplicación usando el modo adecuado:
-   ```bash
-   npm run build -- --mode production
-   ```
+### Principios Fundamentales:
+* **Ubicación Co-localizada:** Cada componente tiene su test a un lado (`[Nombre].tsx` -> `[Nombre].test.tsx`).
+* **Patrón AAA (Arrange-Act-Assert):** Estructuración clara de cada test unitario.
+* **Mocks aislados:** Limpieza automática en `beforeEach(() => vi.clearAllMocks())`.
+* **Consultas por Roles ARIA:** Uso de `screen.getByRole`, `screen.getByText`, `screen.getByPlaceholderText` para probar desde la perspectiva del usuario.
+* **Matriz de Pruebas Obligatoria:**
+  1. Happy Path (render inicial, títulos, botones).
+  2. Búsqueda y Filtros en tiempo real.
+  3. Modales y formularios de interacción.
+  4. Resiliencia / Fail-over (mensajes de sin resultados o estados nulos).
 
-### Opción B: Proxy de Producción (Recomendado por Seguridad)
-Si la aplicación se sirve desde un servidor web (como Nginx o Apache) que puede realizar redirecciones proxy:
-1. Configura el servidor web de producción para redirigir las solicitudes a `/api` hacia el backend real (igual que en desarrollo).
-   - Ejemplo de configuración en **Nginx**:
-     ```nginx
-     location /api/ {
-         proxy_pass https://serviciosrest-produccion.polakgrupo.com/;
-         proxy_set_header Host serviciosrest-produccion.polakgrupo.com;
-         proxy_ssl_server_name on;
-     }
-     ```
-2. Mantén las variables de entorno de producción con rutas relativas basadas en `/api`:
-   ```env
-   VITE_API_URL_SEG="/api/kiosco/Apis/IntranetSeguridad"
-   VITE_APIS_PLANTA="/api/kiosco/Apis/Planta"
-   VITE_API_HISTORICO="/api/kiosco/IAPlanta/AreaKPIHistoricoAPI/area_kpihistoricoes"
-   VITE_API_KPI="/api/kiosco/IAPlanta/AreaKPIAPI/area_kpis"
-   ```
-3. Esto mantiene el código idéntico en desarrollo y producción, delegando la resolución DNS y el enrutamiento seguro al Proxy de infraestructura.
+---
+
+## 2. Archivos de Configuración del Entorno
+
+* **Configuración de Vitest:** Integrada en [vite.config.ts](file:///workspaces/TableroPlanta/vite.config.ts) con `globals: true` y `environment: 'jsdom'`.
+* **Setup de Matchers:** [src/setupTests.ts](file:///workspaces/TableroPlanta/src/setupTests.ts)
+  * Importa `@testing-library/jest-dom` para matchers extendidos como `toBeInTheDocument()`.
+* **Comandos en package.json:** [package.json](file:///workspaces/TableroPlanta/package.json)
+  * Script de prueba: `"test": "vitest run"`.
+
+---
+
+## 3. Ejemplo de Implementación de Referencia
+
+Ubicación: [PackagingLinesManager.test.tsx](file:///workspaces/TableroPlanta/src/features/lineaempaque/PackagingLinesManager.test.tsx)
+
+```tsx
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { PackagingLinesManager } from './PackagingLinesManager';
+
+describe('PackagingLinesManager', () => {
+  it('debe renderizar el título del módulo y la tabla inicial', () => {
+    render(<PackagingLinesManager />);
+    expect(screen.getByRole('heading', { name: /líneas de empaque/i })).toBeInTheDocument();
+  });
+
+  it('debe filtrar registros al escribir en el buscador', async () => {
+    render(<PackagingLinesManager />);
+    const searchInput = screen.getByPlaceholderText(/buscar líneas de empaque/i);
+    await userEvent.type(searchInput, 'Alfa');
+    expect(screen.getByText('Línea de Prueba Alfa')).toBeInTheDocument();
+  });
+});
+```
+
+---
+
+## 4. Comandos de Ejecución
+
+```bash
+# Ejecutar todas las pruebas del proyecto (Vitest)
+npm test
+
+# Ejecutar una prueba específica
+npx vitest run src/features/lineaempaque/PackagingLinesManager.test.tsx
+```

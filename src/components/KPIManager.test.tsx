@@ -6,15 +6,15 @@ import { KPIManager } from './KPIManager';
 import { CatalogosKPIService } from '../services/CatalogosKPI';
 
 // Mock CatalogosKPIService
-jest.mock('../services/CatalogosKPI', () => {
+vi.mock('../services/CatalogosKPI', () => {
   return {
     CatalogosKPIService: {
-      getDireccionesLista: jest.fn(),
-      getCategoriasLista: jest.fn(),
-      getKPIById: jest.fn(),
-      getUnidadMedidaLista: jest.fn(),
-      insertKPI: jest.fn(),
-      updateKPI: jest.fn(),
+      getDireccionesLista: vi.fn(),
+      getCategoriasLista: vi.fn(),
+      getKPIById: vi.fn(),
+      getUnidadMedidaLista: vi.fn(),
+      insertKPI: vi.fn(),
+      updateKPI: vi.fn(),
     },
   };
 });
@@ -33,8 +33,8 @@ describe('KPIManager - Componente y Pruebas de Robustez (Fail-over)', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (CatalogosKPIService.getDireccionesLista as jest.Mock).mockReturnValue(mockDirecciones);
-    (CatalogosKPIService.getCategoriasLista as jest.Mock).mockResolvedValue(mockCategorias);
+    (CatalogosKPIService.getDireccionesLista as any).mockReturnValue(mockDirecciones);
+    (CatalogosKPIService.getCategoriasLista as any).mockResolvedValue(mockCategorias);
   });
 
   afterEach(() => {

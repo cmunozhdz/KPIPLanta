@@ -100,7 +100,7 @@ Para que el agente genere un nuevo módulo completo, simplemente solicita en el 
 
 **Ejemplo Específico:**
 > *"Hola Agente. Crea el módulo CRUD para Líneas de Empaque siguiendo crud-manager.md y webdesigner.md. Genera los archivos linea-empaque.types.ts (con id, codigo, nombre, estado) y PackagingLinesManager.tsx."*
-
+>* "Hola Agente. Crea el modulo CRUD para turnos de trabajo siguiendo crud-manager.md y webdesigner.md. Genera los archivos turno-trabajo.types.ts (con id, codigo, nombre, estado) y TurnoTrabajoManager.tsx.", los servicios lo va a definir otro agente
 ---
 
 ## 3. Estructura de Archivos Generada

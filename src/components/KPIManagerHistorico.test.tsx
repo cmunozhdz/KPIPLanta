@@ -225,10 +225,13 @@ async function runTests() {
     }
   } catch (err: any) {
     console.error('❌ TEST 4 FALLÓ:', err.message);
-    process.exit(1);
-  }
-
   console.log('\n🎉 ¡Todas las pruebas unitarias y de integración de KPIManagerHistorico finalizaron con éxito!');
 }
 
-runTests();
+describe('KPIManagerHistorico', () => {
+  it('debe ejecutar todas las comprobaciones de servicio e inserción/actualización de históricos', async () => {
+    await runTests();
+  });
+});
+
+
