@@ -65,9 +65,7 @@ scp  /workspaces/TableroPlanta/dist/readme.txt ctessh@192.168.2.220:"e:/Aplicaci
     scp -r /workspaces/TableroPlanta/dist/* ctessh@192.168.2.220:"e:/Aplicaciones/kpiplanta/"
 
 
-### Implementacion de agntes para pruebas unitarias
-
-
+### Implementacion de agentes para pruebas unitarias
 
 #### Para ejecutar las pruebas unitarias de TypeScript/React:
 
@@ -75,6 +73,85 @@ scp  /workspaces/TableroPlanta/dist/readme.txt ctessh@192.168.2.220:"e:/Aplicaci
     "Genera la estrategia de pruebas para este componente".
 
 El agente te devolverá primero el archivo .test-report.md para validar los escenarios antes de escribir una sola línea del .test.tsx.
+
+---
+
+# 🤖 Guía de Uso del Agente CRUD Manager (`crud-manager.md`)
+
+Esta guía describe cómo cualquier usuario o desarrollador puede interactuar con el agente de IA para generar nuevos módulos de gestión y CRUDs siguiendo la arquitectura de software y el sistema de diseño visual del proyecto **KPI Planta Polak**.
+
+## 1. ¿Cómo Funciona el Sistema de Agentes?
+
+El proyecto cuenta con reglas de sistema preconfiguradas en `.agents/rules/`:
+- **`crud-manager.md`**: Define la estructura visual y de componentes para las vistas de gestión CRUD (encabezado, botón de agregar, barra de búsqueda rápida y tabla de datos con acciones).
+- **`react-architect.md`**: Establece la jerarquía estricta de carpetas dentro de `src/features/[modulo]/`.
+- **`webdesigner.md`**: Define los tokens de color de Tailwind CSS (`#2563EB`, `#F8FAFC`, bordes `slate-200`, badges de estado y redondeado `rounded-3xl` / `rounded-2xl`).
+
+---
+
+## 2. Cómo Solicitar un Nuevo Módulo CRUD
+
+Para que el agente genere un nuevo módulo completo, simplemente solicita en el chat la creación del recurso indicando el nombre de la entidad.
+
+### 💡 Prompts de Ejemplo
+
+**Ejemplo Básico:**
+> *"Hola Agente. Siguiendo las reglas de .agents/rules/ (crud-manager.md), crea el módulo completo CRUD para Turnos de Trabajo."*
+
+**Ejemplo Específico:**
+> *"Hola Agente. Crea el módulo CRUD para Líneas de Empaque siguiendo crud-manager.md y webdesigner.md. Genera los archivos linea-empaque.types.ts (con id, codigo, nombre, estado) y PackagingLinesManager.tsx."*
+
+---
+
+## 3. Estructura de Archivos Generada
+
+Al ejecutar la orden, el agente creará automáticamente los siguientes archivos respetando la arquitectura modular:
+
+```text
+src/features/[modulo]/
+├── types/
+│   └── [modulo].types.ts       <-- Interfaz TypeScript (ej. LineaEmpaqueData)
+├── components/
+│   └── [Modulo]FormModal.tsx   <-- Componentes modales o auxiliares (opcional)
+└── [Nombre]Manager.tsx          <-- Componente CRUD principal (ej. PackagingLinesManager.tsx)
+```
+
+---
+
+## 4. Estándar Anatómico del Componente Manager (`.tsx`)
+
+Cualquier componente generado por `crud-manager.md` incluye obligatoriamente:
+
+1. **Encabezado (Navbar Interno):**
+   - Título en mayúsculas (`text-2xl font-bold text-slate-900`).
+   - Descripción o subtítulo funcional (`text-sm text-slate-500 mt-1`).
+   - Botón azul de agregar posicionado a la derecha (`bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl flex items-center gap-2`).
+
+2. **Barra de Búsqueda Rápida:**
+   - Input filtrable en tiempo real (`w-full max-w-md`) con icono de lupa a la izquierda (`bi bi-search`).
+
+3. **Tabla de Datos & Botones de Acción en Primeras Columnas:**
+   - **Columna 1 (Centrada):** Botón **Modificar** (`<button title="Modificar"><i className="bi bi-pencil-square"></i></button>`).
+   - **Columna 2 (Centrada):** Botón **Eliminar** (`<button title="Eliminar"><i className="bi bi-trash"></i></button>`).
+   - **Columnas Siguientes:** Datos del registro (ej. Código, Nombre) y Badges de estado (`Activo` en verde / `Inactivo` en gris).
+
+4. **Modal Interactivo de Formulario:**
+   - Modal pop-up con fondo difuminado para agregar o editar registros con validación tipada.
+
+---
+
+## 5. Pasos para Probar e Integrar
+
+1. Importa el componente `[Nombre]Manager` dentro de `src/App.tsx` o en la sección correspondiente de navegación.
+2. Corre el servidor local para verificar el renderizado:
+   ```bash
+   npm run dev
+   ```
+3. Comprueba que la tabla filtre, permita agregar registros y ejecute las acciones de edición y eliminación.
+
+---
+
+
 
 #Ajustes post productivo
 
