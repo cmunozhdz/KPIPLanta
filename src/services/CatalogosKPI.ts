@@ -21,6 +21,8 @@ export interface AreaKPIData {
   Unidaddemedida: string;
   AreaId: string;
   KPIActivo: boolean;
+  Periodicidad?: string;
+  Frecuencia?: string;
 }
 
 export const CatalogosKPIService = {
@@ -153,7 +155,8 @@ export const CatalogosKPIService = {
       Direccion: kpiData.Direccion,
       Unidaddemedida: kpiData.Unidaddemedida,
       KPIActivo: kpiData.KPIActivo,
-      AreaId: kpiData.AreaId
+      AreaId: kpiData.AreaId,
+      Frecuencia: kpiData.Frecuencia || kpiData.Periodicidad || 'M'
     };
     const url = getKpiApiUrl();
     console.log(`[CatalogosKPIService] Invoking insertKPI - URL: ${url}`, { payload });
@@ -184,7 +187,8 @@ export const CatalogosKPIService = {
       Direccion: kpiData.Direccion,
       Unidaddemedida: kpiData.Unidaddemedida,
       KPIActivo: kpiData.KPIActivo,
-      AreaId: kpiData.AreaId
+      AreaId: kpiData.AreaId,
+      Frecuencia: kpiData.Frecuencia || kpiData.Periodicidad || 'M'
     };
     const url = `${getKpiApiUrl()}/${id}`;
     console.log(`[CatalogosKPIService] Invoking updateKPI - URL: ${url}`, { payload });

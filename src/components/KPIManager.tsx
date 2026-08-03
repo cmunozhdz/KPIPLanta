@@ -75,7 +75,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
             const direccion = kpi.Direccion || kpi.direccion || 1;
             const unidad = kpi.Unidaddemedida || kpi.unidaddemedida || '';
             const unidadDesc = kpi.UnidadMedidaDescripcion || unidad;
-            const periodicidadVal = (kpi.Periodicidad || kpi.periodicidad || 'M').toUpperCase();
+            const periodicidadVal = (kpi.Frecuencia || kpi.frecuencia || kpi.Periodicidad || kpi.periodicidad || 'M').toUpperCase();
             const activo = kpi.KPIActivo ?? kpi.Activo ?? kpi.activo ?? true;
             
             console.log(`[KPIManager] Extracted values:`, { descripcion, categoria, meta, direccion, unidad, unidadDesc, periodicidad: periodicidadVal, activo });
@@ -132,6 +132,7 @@ export const KPIManager: React.FC<KPIManagerProps> = ({ areaId, kpiId, mode, onC
       Direccion: Number(direccion),
       Unidaddemedida: unidaddemedida,
       Periodicidad: periodicidad,
+      Frecuencia: periodicidad,
       AreaId: areaId,
       KPIActivo: activo
     };
