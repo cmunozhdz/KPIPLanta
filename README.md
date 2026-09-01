@@ -65,14 +65,20 @@ scp  /workspaces/TableroPlanta/dist/readme.txt ctessh@192.168.2.220:"e:/Aplicaci
     scp -r /workspaces/TableroPlanta/dist/* ctessh@192.168.2.220:"e:/Aplicaciones/kpiplanta/"
 
 
-### Implementacion de agentes para pruebas unitarias
+### Implementación de Agentes y Skills para Pruebas Unitarias
 
-#### Para ejecutar las pruebas unitarias de TypeScript/React:
+#### Skill a Demanda: `react-test-architect`
 
-    Cada vez que abras un componente nuevo, invoca al agente diciendo: 
-    "Genera la estrategia de pruebas para este componente".
+Las pruebas unitarias y de componentes se gestionan mediante la **Skill `react-test-architect`**, la cual se ejecuta **únicamente a demanda** para evitar ejecuciones automáticas continuas al editar componentes.
 
-El agente te devolverá primero el archivo .test-report.md para validar los escenarios antes de escribir una sola línea del .test.tsx.
+#### ¿Cómo invocar la Skill?
+Para crear o ejecutar pruebas automáticas con Vitest y React Testing Library, solicita explícitamente en el chat:
+
+- `"Usa la skill react-test-architect para generar los tests del componente PackagingLinesManager"`
+- `"Genera y ejecuta las pruebas unitarias para el componente UsersManager"`
+- `"Ejecuta los tests de Vitest para el módulo de áreas"`
+
+La skill se encargará de inspeccionar el componente `.tsx`, generar la suite `.test.tsx` bajo el patrón AAA (Arrange-Act-Assert) y ejecutar `npx vitest run` en la terminal bash hasta verificar el resultado `PASS`.
 
 ---
 

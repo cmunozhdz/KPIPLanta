@@ -1,6 +1,4 @@
-// Test para KPIManagerHistorico sin dependencias adicionales de test UI.
-// Se ejecuta dentro del devcontainer o localmente usando: npx tsx src/components/KPIManagerHistorico.test.tsx
-
+import { describe, it } from 'vitest';
 import { kpiHistoricoService } from '../services/kpiHistoricoService';
 
 // Mocks del servicio kpiHistoricoService
@@ -65,9 +63,13 @@ async function simulateHandleSubmit(params: {
     return { error, successMsg };
   }
 
-  const commentRegex = /^(?=.*[a-zA-Z0-9ñÑáéíóúüÁÉÍÓÚÜ]).+$/;
-  if (!commentRegex.test(params.comentarios)) {
-    error = 'El comentario es obligatorio y debe contener al menos una letra o número.';
+  const fullText = params.comentarios.trim();
+  const totalWords = fullText
+    .split(/\s+/)
+    .filter(word => /[a-zA-Z0-9ñÑáéíóúüÁÉÍÓÚÜ]/.test(word));
+
+  if (fullText.length <= 1 || totalWords.length < 2) {
+    error = 'El comentario es obligatorio y debe contener al menos dos palabras (no se permite un solo carácter o una sola palabra).';
     return { error, successMsg };
   }
 
@@ -116,7 +118,7 @@ async function runTests() {
     const res = await simulateHandleSubmit({
       historicoId: '0',
       valor: '92.4',
-      comentarios: 'Producción de la semana superada',
+      comentarios: 'Producción de la semana superada sin contratiempos',
       userEmail: 'operator@polakgrupo.com',
       areaId: 'AreaProd',
       kpiId: 42,
@@ -130,7 +132,7 @@ async function runTests() {
       res.successMsg === 'Registro exitoso.' &&
       mockInsertHistoricoCalls.length === 1 &&
       mockInsertHistoricoCalls[0].Valor === 92.4 &&
-      mockInsertHistoricoCalls[0].Comentarios === 'Producción de la semana superada'
+      mockInsertHistoricoCalls[0].Comentarios === 'Producción de la semana superada sin contratiempos'
     ) {
       console.log('✅ TEST 1 PASÓ: Inserción procesada correctamente.');
     } else {
@@ -147,7 +149,7 @@ async function runTests() {
     const res = await simulateHandleSubmit({
       historicoId: '0',
       valor: 'not-a-number',
-      comentarios: 'Valor no numérico',
+      comentarios: 'Valor no numérico ingresado por usuario',
       userEmail: 'operator@polakgrupo.com',
       areaId: 'AreaProd',
       kpiId: 42,
@@ -162,17 +164,17 @@ async function runTests() {
       throw new Error(`Fallo Test 2. Resultado: ${JSON.stringify(res)}`);
     }
   } catch (err: any) {
-    console.error('❌ TEST 2 FALLÓ:', err.message);
+    console.error('❌ TEST 3 FALLÓ:', err.message);
     process.exit(1);
   }
 
-  // Test 3: Validación de comentarios vacíos o sin caracteres alfanuméricos
+  // Test 3: Rechazar un solo carácter
   try {
-    console.log('\nTest 3: Probar comentarios sin caracteres válidos (debe fallar)');
+    console.log('\nTest 3: Probar un solo carácter en comentario (debe fallar)');
     const res = await simulateHandleSubmit({
       historicoId: '0',
       valor: '95',
-      comentarios: '   ',
+      comentarios: 'a',
       userEmail: 'operator@polakgrupo.com',
       areaId: 'AreaProd',
       kpiId: 42,
@@ -182,10 +184,10 @@ async function runTests() {
     });
 
     if (
-      res.error === 'El comentario es obligatorio y debe contener al menos una letra o número.' &&
+      res.error === 'El comentario es obligatorio y debe contener al menos dos palabras (no se permite un solo carácter o una sola palabra).' &&
       res.successMsg === null
     ) {
-      console.log('✅ TEST 3 PASÓ: Se rechazaron comentarios vacíos/inválidos.');
+      console.log('✅ TEST 3 PASÓ: Se rechazó el comentario de un solo carácter.');
     } else {
       throw new Error(`Fallo Test 3. Resultado: ${JSON.stringify(res)}`);
     }
@@ -194,15 +196,43 @@ async function runTests() {
     process.exit(1);
   }
 
-  // Test 4: Actualización exitosa en modo edición
+  // Test 4: Rechazar varios enters o saltos de línea / espacios vacíos
   try {
-    console.log('\nTest 4: Probar actualización de registro existente (modo edición)');
+    console.log('\nTest 4: Probar varios enters / saltos de línea sin texto válido (debe fallar)');
+    const res = await simulateHandleSubmit({
+      historicoId: '0',
+      valor: '95',
+      comentarios: '\n\n\n   \n\n',
+      userEmail: 'operator@polakgrupo.com',
+      areaId: 'AreaProd',
+      kpiId: 42,
+      ano: 2026,
+      mes: 7,
+      semana: 27
+    });
+
+    if (
+      res.error === 'El comentario es obligatorio y debe contener al menos dos palabras (no se permite un solo carácter o una sola palabra).' &&
+      res.successMsg === null
+    ) {
+      console.log('✅ TEST 4 PASÓ: Se rechazaron los múltiples enters y saltos de línea sin contenido.');
+    } else {
+      throw new Error(`Fallo Test 4. Resultado: ${JSON.stringify(res)}`);
+    }
+  } catch (err: any) {
+    console.error('❌ TEST 4 FALLÓ:', err.message);
+    process.exit(1);
+  }
+
+  // Test 5: Actualización exitosa en modo edición
+  try {
+    console.log('\nTest 5: Probar actualización de registro existente (modo edición)');
     mockUpdateHistoricoCalls.length = 0;
 
     const res = await simulateHandleSubmit({
       historicoId: '1540',
       valor: '88.5',
-      comentarios: 'Corrección de registro semanal',
+      comentarios: 'Corrección de registro semanal justificada',
       userEmail: 'admin@polakgrupo.com',
       areaId: 'AreaProd',
       kpiId: 42,
@@ -219,12 +249,15 @@ async function runTests() {
       mockUpdateHistoricoCalls[0].payload.Valor === 88.5 &&
       mockUpdateHistoricoCalls[0].payload.Historico === 1540
     ) {
-      console.log('✅ TEST 4 PASÓ: Actualización de registro existente procesada con éxito.');
+      console.log('✅ TEST 5 PASÓ: Actualización de registro existente procesada con éxito.');
     } else {
-      throw new Error(`Fallo Test 4. Resultado: ${JSON.stringify(res)}`);
+      throw new Error(`Fallo Test 5. Resultado: ${JSON.stringify(res)}`);
     }
   } catch (err: any) {
-    console.error('❌ TEST 4 FALLÓ:', err.message);
+    console.error('❌ TEST 5 FALLÓ:', err.message);
+    process.exit(1);
+  }
+
   console.log('\n🎉 ¡Todas las pruebas unitarias y de integración de KPIManagerHistorico finalizaron con éxito!');
 }
 
@@ -233,5 +266,6 @@ describe('KPIManagerHistorico', () => {
     await runTests();
   });
 });
+
 
 

@@ -91,9 +91,13 @@ export const KPIManagerHistorico: React.FC<KPIManagerHistoricoProps> = ({
       return;
     }
 
-    const commentRegex = /^(?=.*[a-zA-Z0-9ñÑáéíóúüÁÉÍÓÚÜ]).+$/;
-    if (!commentRegex.test(comentarios)) {
-      setError('El comentario es obligatorio y debe contener al menos una letra o número.');
+    const fullText = comentarios.trim();
+    const totalWords = fullText
+      .split(/\s+/)
+      .filter(word => /[a-zA-Z0-9ñÑáéíóúüÁÉÍÓÚÜ]/.test(word));
+
+    if (fullText.length <= 1 || totalWords.length < 2) {
+      setError('El comentario es obligatorio y debe contener al menos dos palabras (no se permite un solo carácter o una sola palabra).');
       setSaving(false);
       return;
     }

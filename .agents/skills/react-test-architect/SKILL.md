@@ -1,8 +1,11 @@
 ---
-trigger: manual
+name: react-test-architect
+description: >-
+  Genera y ejecuta pruebas unitarias y de componentes automáticas con Vitest y React Testing Library para módulos React en TypeScript.
+  Actívalo a demanda únicamente cuando el usuario solicite crear, actualizar o ejecutar tests/pruebas de un componente o manager.
 ---
 
-# [REGLA DE SISTEMA: AGENTE DE PRUEBAS UNITARIAS Y COMPONENTES CON VITEST]
+# [SKILL: AGENTE DE PRUEBAS UNITARIAS Y COMPONENTES CON VITEST]
 
 @.agents/rules/react-architect.md
 @.agents/rules/crud-manager.md
