@@ -20,6 +20,7 @@
         "./*"
       ]
     },
+    "types": ["vitest/globals", "vite/client"],
     "allowImportingTsExtensions": true,
     "noEmit": true
   }

@@ -1,8 +1,7 @@
 import { CalendarioSemanalItem, CalendarioSemanalResponse } from '../types';
+import { API_CONFIG } from '../config/apiConfig';
 
-const BASE_CALENDAR_URL =
-  import.meta.env.VITE_API_CALENDARIO ||
-  '/api/Kiosco/IAPlanta/CalendarioSQCDPAPI/calendariosemanal';
+const BASE_CALENDAR_URL = API_CONFIG.CALENDARIO;
 
 const buildFechaConsulta = (): string => {
   const now = new Date();

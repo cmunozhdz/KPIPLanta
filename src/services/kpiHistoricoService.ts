@@ -1,7 +1,8 @@
 import { KpiHistoricoSemanal } from '../types';
+import { API_CONFIG } from '../config/apiConfig';
 
-const getBaseApiUrl = () => import.meta.env.VITE_APIS_PLANTA || 'https://serviciosrest.polakgrupo.com/kiosco/Apis/Planta';
-const getHistoricoApiUrl = () => import.meta.env.VITE_API_HISTORICO || 'https://serviciosrest.polakgrupo.com/kiosco/IAPlanta/AreaKPIHistoricoAPI/area_kpihistoricoes';
+const getBaseApiUrl = () => API_CONFIG.PLANTA;
+const getHistoricoApiUrl = () => API_CONFIG.KPI_HISTORICO;
 
 /**
  * Genera una fecha de consulta con décimas de segundo para evitar cache.

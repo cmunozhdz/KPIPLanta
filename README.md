@@ -13,17 +13,52 @@ View your app in AI Studio: https://ai.studio/apps/e2c366fb-8eea-47f2-8cde-63d09
 **Prerequisites:**  Node.js
 
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. Instalar dependencias:
+   ```bash
+   npm install
+   ```
 
-## Depliege en servidor cdd
+2. Configuración de Entornos y APIs:
+   La aplicación se conecta dinámicamente a los servicios REST mediante `VITE_KIOSCO_CONTEXT`:
+   * **Planta General / Estándar:** apunta a `https://serviciosrest.polakgrupo.com/Kiosco`
+   * **Planta DJP:** apunta a `https://serviciosrest.polakgrupo.com/KioscoDJP`
 
-     
-1.- Crear archivo /public/web.config con el siguiente contenido  para controlar las rutas  y se vayan a /KPIPlanta/index.html
+3. Ejecutar localmente en desarrollo:
+   ```bash
+   # Iniciar apuntando a Kiosco estándar:
+   npm run dev
 
+   # Iniciar apuntando a KioscoDJP:
+   npm run dev:djp
+   ```
+
+---
+
+## Compilación y Build para Producción
+
+Para compilar el proyecto según el ambiente o planta deseada:
+
+### Opción A: Compilar para Planta General (Kiosco Estándar)
+Utiliza la configuración definida en `.env.production`:
+```bash
+npm run build
+```
+> Las peticiones empaquetadas en `dist/` apuntarán a: `https://serviciosrest.polakgrupo.com/Kiosco`
+
+### Opción B: Compilar para Planta DJP (KioscoDJP)
+Utiliza el modo DJP definido en `.env.djp`:
+```bash
+npm run build:djp
+```
+> Las peticiones empaquetadas en `dist/` apuntarán a: `https://serviciosrest.polakgrupo.com/KioscoDJP`
+
+---
+
+## Despliegue en Servidor CDD (IIS)
+
+1. Crear archivo `/public/web.config` con el siguiente contenido para controlar el enrutamiento SPA hacia `/KPIPlanta/index.html`:
+
+```xml
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <system.webServer>
@@ -40,29 +75,34 @@ View your app in AI Studio: https://ai.studio/apps/e2c366fb-8eea-47f2-8cde-63d09
       </rules>
     </rewrite>
     <staticContent>
-     
     </staticContent>
   </system.webServer>
 </configuration>
-    
-2.- Transpilar el proyecto 
-    `npm run build`
+```
 
+2. Generar el paquete de producción:
+   ```bash
+   # Para Kiosco Estándar:
+   npm run build
 
-3.- Copiar la carpeta dist a e:\Aplicaciones\kpiplanta\ en el servidor 
-scp -r /workspaces/TableroPlanta/dist/* ctessh@192.168.2.220:"e:/Aplicaciones/kpiplanta/"
+   # O para Kiosco DJP:
+   npm run build:djp
+   ```
 
-**otros ejemplo de uso scp**
-### a) Copiar archivo local a una remota
-    scp /ruta/local/del/archivo.txt usuario@192.168.1.50:/ruta/especifica/en/el/servidor/
+3. Copiar la carpeta `dist` al servidor de aplicaciones:
+   ```bash
+   scp -r /workspaces/TableroPlanta/dist/* ctessh@192.168.2.220:"e:/Aplicaciones/kpiplanta/"
+   ```
 
-    ejemplo:
-scp  /workspaces/TableroPlanta/dist/readme.txt ctessh@192.168.2.220:"e:/Aplicaciones/kpiplanta/"
-### b) Copiar carpeta local a una remota
-    scp -r /ruta/local/carpeta usuario@ip:/ruta/remota
-
-    ejemplo:
-    scp -r /workspaces/TableroPlanta/dist/* ctessh@192.168.2.220:"e:/Aplicaciones/kpiplanta/"
+**Otros ejemplos de uso de scp:**
+* Copiar archivo local a ruta remota:
+  ```bash
+  scp /workspaces/TableroPlanta/dist/readme.txt ctessh@192.168.2.220:"e:/Aplicaciones/kpiplanta/"
+  ```
+* Copiar directorio completo a ruta remota:
+  ```bash
+  scp -r /workspaces/TableroPlanta/dist/* ctessh@192.168.2.220:"e:/Aplicaciones/kpiplanta/"
+  ```
 
 
 ### Implementación de Agentes y Skills para Pruebas Unitarias

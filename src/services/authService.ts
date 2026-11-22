@@ -1,4 +1,6 @@
-const getApiUrlSeg = () => import.meta.env.VITE_API_URL_SEG || 'https://serviciosrest.polakgrupo.com/kiosco/Apis/IntranetSeguridad';
+import { API_CONFIG } from '../config/apiConfig';
+
+const getApiUrlSeg = () => API_CONFIG.SEGURIDAD;
 
 export const authService = {
   checkPermission: async (permisosId: string, userEmail: string) => {

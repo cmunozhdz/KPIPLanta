@@ -9,10 +9,10 @@
 		"TableroPlanta"
 	],
 	"forwardPorts": [
-		3000
+		3001
 	],
 	"portsAttributes": {
-		"3000": {
+		"3001": {
 			"label": "Aplicación Web",
 			"hostPort": 3001,
 			"onAutoForward": "notify"

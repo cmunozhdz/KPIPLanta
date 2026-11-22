@@ -23,6 +23,8 @@ export default defineConfig(({mode}) => {
       setupFiles: './src/setupTests.ts',
     },
     server: {
+      host: '0.0.0.0',
+      port: 3001,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
@@ -30,7 +32,7 @@ export default defineConfig(({mode}) => {
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
       proxy: {
         '/api': {
-          target: env.VITE_PROXY_TARGET || 'https://serviciosrest.polakgrupo.com',
+          target: env.VITE_PROXY_TARGET || env.VITE_API_HOST || 'https://serviciosrest.polakgrupo.com',
           changeOrigin: true,
           secure: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
