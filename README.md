@@ -195,6 +195,10 @@ Cualquier componente generado por `crud-manager.md` incluye obligatoriamente:
    ```
 3. Comprueba que la tabla filtre, permita agregar registros y ejecute las acciones de edición y eliminación.
 
+## Agente de seguridad 
+Se implementa skill para mandarlo llamar hacer lo siguiente
+"Audita la seguridad del proyecto buscando CVEs y riesgos OWASP" o "Ejecuta las pruebas de seguridad".
+
 ---
 
 
