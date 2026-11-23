@@ -90,8 +90,13 @@ npm run build:djp
    ```
 
 3. Copiar la carpeta `dist` al servidor de aplicaciones:
+   Despliege Planta:
    ```bash
    scp -r /workspaces/TableroPlanta/dist/* ctessh@192.168.2.220:"e:/Aplicaciones/kpiplanta/"
+   ```
+    Despliege DJP:
+    ```bash
+   scp -r /workspaces/TableroPlanta/dist/* ctessh@192.168.2.220:"e:/Aplicaciones/KPIDJP/"
    ```
 
 **Otros ejemplos de uso de scp:**
